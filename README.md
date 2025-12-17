@@ -94,6 +94,11 @@ In addition to the specific actuators, chairs may be programmed with a number of
 ## WDI Implementer Guidance
 The WDI builds upon existing specifications for using [Human Interface Devices (HID)](https://en.wikipedia.org/wiki/Human_interface_device).
 
+### Compatibility Tester
+[A web-based testing tool for verifying input device compatibility with the WDI standard](/tester-util/index.html) 
+
+It displays raw HID events from gamepads, joysticks, and keyboards alongside the translated wheelchair commands they would produce. It has been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly.
+
 ### USB
 The current version of USB implementation guidance is linked: [here](/docs/usb/wdi-usb-interface.md)
 
