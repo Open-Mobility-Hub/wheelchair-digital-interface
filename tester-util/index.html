@@ -1,0 +1,1195 @@
+<!-- Copyright 2025 LUCI Mobility, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WDI Compatibility Tester</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #111827;
+      color: #fff;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #60a5fa;
+    }
+
+    header p {
+      font-size: 0.875rem;
+      color: #9ca3af;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .panel {
+      background: #1f2937;
+      border-radius: 0.5rem;
+      padding: 1rem;
+    }
+
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #93c5fd;
+      margin-bottom: 0.75rem;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      color: white;
+      transition: background 0.2s;
+      margin-bottom: 0.5rem;
+    }
+
+    .btn-blue {
+      background: #2563eb;
+    }
+
+    .btn-blue:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-red {
+      background: #dc2626;
+    }
+
+    .btn-red:hover {
+      background: #b91c1c;
+    }
+
+    .error-box {
+      margin-top: 0.75rem;
+      background: rgba(127, 29, 29, 0.5);
+      border: 1px solid #ef4444;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-size: 0.875rem;
+      color: #fecaca;
+    }
+
+    .info-box {
+      background: #374151;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .info-box .name {
+      font-weight: 500;
+      color: #4ade80;
+    }
+
+    .info-box .vid {
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+
+    .info-box.active {
+      border: 2px solid #4ade80;
+    }
+
+    .source-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
+    .source-hid {
+      background: #7c3aed;
+    }
+
+    .source-gamepad {
+      background: #0891b2;
+    }
+
+    .source-kbd {
+      background: #ca8a04;
+    }
+
+    .command-display {
+      border-radius: 0.5rem;
+      padding: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .command-display .cmd {
+      font-size: 1.25rem;
+      font-weight: bold;
+    }
+
+    .joystick-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .joystick {
+      position: relative;
+      width: 128px;
+      height: 128px;
+      background: #374151;
+      border-radius: 50%;
+      border: 2px solid #4b5563;
+    }
+
+    .joystick .crosshair-v {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 1px;
+      height: 100%;
+      background: #4b5563;
+    }
+
+    .joystick .crosshair-h {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      height: 1px;
+      width: 100%;
+      background: #4b5563;
+    }
+
+    .joystick .knob {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background: #3b82f6;
+      border-radius: 50%;
+      border: 2px solid #93c5fd;
+      transform: translate(-50%, -50%);
+      transition: all 0.05s;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .status-item {
+      background: #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .status-item .label {
+      color: #9ca3af;
+    }
+
+    .status-item.active {
+      background: #dc2626;
+    }
+
+    .status-item.active-green {
+      background: #16a34a;
+    }
+
+    .status-item.inactive {
+      background: #374151;
+    }
+
+    .indicators {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #374151;
+    }
+
+    .indicator.on-orange {
+      background: #f97316;
+    }
+
+    .indicator.on-yellow {
+      background: #facc15;
+      color: #000;
+    }
+
+    .indicator.on-red {
+      background: #ef4444;
+    }
+
+    .indicator.on-blue {
+      background: #3b82f6;
+    }
+
+    .raw-box {
+      background: #374151;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .raw-box .label {
+      color: #9ca3af;
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .raw-box .hex {
+      font-family: monospace;
+      color: #4ade80;
+      word-break: break-all;
+    }
+
+    .axis-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .axis-row .name {
+      width: 3rem;
+      color: #9ca3af;
+      font-size: 0.75rem;
+    }
+
+    .axis-row .bar {
+      flex: 1;
+      background: #4b5563;
+      border-radius: 0.25rem;
+      height: 1rem;
+      overflow: hidden;
+    }
+
+    .axis-row .bar-fill {
+      height: 100%;
+      background: #3b82f6;
+      transition: width 0.05s;
+    }
+
+    .axis-row .value {
+      width: 4rem;
+      text-align: right;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .button-item {
+      width: 28px;
+      height: 28px;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      background: #4b5563;
+    }
+
+    .button-item.pressed {
+      background: #22c55e;
+    }
+
+    .event-log {
+      height: 192px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+
+    .event-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      color: #d1d5db;
+    }
+
+    .event-row:hover {
+      background: #374151;
+    }
+
+    .event-row .ts {
+      color: #6b7280;
+    }
+
+    .event-row .src {
+      padding: 0 0.25rem;
+      border-radius: 0.125rem;
+      font-size: 0.625rem;
+    }
+
+    .event-row .src-hid {
+      background: #7c3aed;
+    }
+
+    .event-row .src-gp {
+      background: #0891b2;
+    }
+
+    .event-row .src-kbd {
+      background: #ca8a04;
+    }
+
+    .event-row .data {
+      color: #4ade80;
+      flex: 1;
+    }
+
+    .event-row .btns {
+      color: #facc15;
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    @media (min-width: 768px) {
+      .mapping-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .mapping-item {
+      background: #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+    }
+
+    .mapping-item .label {
+      color: #9ca3af;
+    }
+
+    .placeholder {
+      color: #6b7280;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .gamepad-list {
+      margin-top: 0.5rem;
+    }
+
+    .gamepad-item {
+      background: #374151;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .gamepad-item:hover {
+      border-color: #4b5563;
+    }
+
+    .gamepad-item.selected {
+      border-color: #4ade80;
+    }
+
+    .gamepad-item .gp-name {
+      font-size: 0.875rem;
+      color: #d1d5db;
+    }
+
+    .gamepad-item .gp-id {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin: 0.75rem 0 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .bg-gray {
+      background: #6b7280;
+    }
+
+    .bg-green {
+      background: #16a34a;
+    }
+
+    .bg-purple {
+      background: #9333ea;
+    }
+
+    .bg-purple-light {
+      background: #a855f7;
+    }
+
+    .bg-red {
+      background: #dc2626;
+    }
+
+    .divider {
+      border-top: 1px solid #374151;
+      margin: 1rem 0;
+    }
+
+    #keyboardCapture:focus {
+      border-color: #4ade80;
+      background: #1f2937;
+    }
+
+    #keyboardCapture.active {
+      border-color: #4ade80;
+    }
+
+    .control-indicator {
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .control-active {
+      background: #16a34a;
+    }
+
+    .control-inactive {
+      background: #991b1b;
+    }
+
+    .tab-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      background: #374151;
+      color: #9ca3af;
+    }
+
+    .tab-btn.active {
+      background: #4b5563;
+      color: #fff;
+    }
+
+    .tab-btn:first-child {
+      border-radius: 0.375rem 0 0 0.375rem;
+    }
+
+    .tab-btn:last-child {
+      border-radius: 0 0.375rem 0.375rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>WDI Compatibility Tester</h1>
+      <p>Wheelchair Digital Interface - HID Device Testing Tool</p>
+    </header>
+
+    <div class="grid grid-3">
+      <!-- Connection Panel -->
+      <div class="panel">
+        <div class="panel-title">Device Connection</div>
+
+        <div class="section-label">WebHID (Raw HID Access)</div>
+        <button id="hidBtn" class="btn btn-blue">Connect HID Device</button>
+        <div id="hidInfo" style="display:none"></div>
+        <div id="hidError" class="error-box" style="display:none"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Gamepad API (Xbox, PlayStation, etc.)</div>
+        <div id="gamepadStatus" style="font-size:0.875rem;color:#9ca3af;margin-bottom:0.5rem;">Press a button on your
+          controller to detect it</div>
+        <div id="gamepadList" class="gamepad-list"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Keyboard</div>
+        <div id="keyboardStatus" style="font-size:0.875rem;color:#9ca3af;margin-bottom:0.5rem;">Click the box below and
+          use keys to control</div>
+        <div id="keyboardCapture" tabindex="0"
+          style="background:#374151;border-radius:0.5rem;padding:1rem;text-align:center;cursor:pointer;border:2px solid #4b5563;outline:none;">
+          <div style="color:#6b7280;font-size:0.875rem;">Click here to capture keyboard</div>
+          <div id="activeKeys" style="margin-top:0.5rem;min-height:1.5rem;color:#4ade80;font-family:monospace;"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Active Input Source</div>
+        <div id="activeSource" class="info-box">
+          <span style="color:#6b7280;">None connected</span>
+        </div>
+      </div>
+
+      <!-- WDI Output Panel -->
+      <div class="panel">
+        <div class="panel-title">WDI Wheelchair Output</div>
+
+        <div id="controlIndicator" class="control-indicator control-inactive">
+          DEVICE CONTROL: INACTIVE
+        </div>
+
+        <div id="commandDisplay" class="command-display bg-gray">
+          <div class="cmd">DRIVE: STOPPED</div>
+        </div>
+        <div class="joystick-container">
+          <div class="joystick">
+            <div class="crosshair-v"></div>
+            <div class="crosshair-h"></div>
+            <div class="knob" id="joystickKnob" style="left:50%;top:50%"></div>
+          </div>
+        </div>
+        <div class="status-grid">
+          <div class="status-item"><span class="label">Mode:</span> <span id="modeValue"
+              style="color:#4ade80;font-weight:500;margin-left:0.5rem">DRIVE</span></div>
+          <div class="status-item"><span class="label">Speed:</span> <span id="speedValue"
+              style="color:#facc15;font-weight:500;margin-left:0.5rem">3/5</span></div>
+          <div class="status-item"><span class="label">Profile:</span> <span id="profileValue"
+              style="color:#22d3ee;font-weight:500;margin-left:0.5rem">1</span></div>
+          <div class="status-item" id="estopItem"><span class="label">E-Stop:</span> <span id="estopValue"
+              style="font-weight:500;margin-left:0.5rem">Off</span></div>
+        </div>
+        <div class="indicators">
+          <div class="indicator" id="indLeft">◀</div>
+          <div class="indicator" id="indLight">💡</div>
+          <div class="indicator" id="indHazard">⚠</div>
+          <div class="indicator" id="indHorn">🔊</div>
+          <div class="indicator" id="indRight">▶</div>
+        </div>
+      </div>
+
+      <!-- Raw Data Panel -->
+      <div class="panel">
+        <div class="panel-title">Raw Input Data</div>
+        <div id="rawDataContainer">
+          <div class="placeholder">Connect a device to see input data</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapping Reference -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>WDI Button Mapping Reference</span>
+        <div>
+          <button class="tab-btn active" id="tabGamepad">Gamepad</button>
+          <button class="tab-btn" id="tabKeyboard">Keyboard</button>
+        </div>
+      </div>
+      <div id="mappingGamepad">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Standard gamepad mapping (Xbox layout)</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Left Stick:</span> Drive Direction</div>
+          <div class="mapping-item"><span class="label">A (South):</span> Emergency Stop</div>
+          <div class="mapping-item"><span class="label">Start:</span> Device Control Toggle</div>
+          <div class="mapping-item"><span class="label">Back/Select:</span> Menu / Wake</div>
+          <div class="mapping-item"><span class="label">LB/RB:</span> Speed Down/Up</div>
+          <div class="mapping-item"><span class="label">D-Pad Up:</span> Profile Up</div>
+          <div class="mapping-item"><span class="label">D-Pad Down:</span> Mode Switch</div>
+          <div class="mapping-item"><span class="label">D-Pad L/R:</span> Blinkers</div>
+          <div class="mapping-item"><span class="label">L3 (Left Stick):</span> Headlight</div>
+          <div class="mapping-item"><span class="label">Y (West):</span> Hazard Lights</div>
+          <div class="mapping-item"><span class="label">R3 (Right Stick):</span> Horn (hold)</div>
+        </div>
+      </div>
+      <div id="mappingKeyboard" style="display:none;">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Keyboard controls per WDI spec</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">↑/W, ↓/S:</span> Forward/Back</div>
+          <div class="mapping-item"><span class="label">←/A, →/D:</span> Left/Right</div>
+          <div class="mapping-item"><span class="label">Enter:</span> Device Control Toggle</div>
+          <div class="mapping-item"><span class="label">PgUp/PgDn/B:</span> Emergency Stop</div>
+          <div class="mapping-item"><span class="label">1-5:</span> Set Speed Level</div>
+          <div class="mapping-item"><span class="label">-/=:</span> Speed Down/Up</div>
+          <div class="mapping-item"><span class="label">,/. :</span> Profile Down/Up</div>
+          <div class="mapping-item"><span class="label">Tab:</span> Mode Switch</div>
+          <div class="mapping-item"><span class="label">O:</span> Open Menu</div>
+          <div class="mapping-item"><span class="label">L:</span> Headlight</div>
+          <div class="mapping-item"><span class="label">H:</span> Hazard Lights</div>
+          <div class="mapping-item"><span class="label">&lt;/&gt;:</span> Left/Right Blinker</div>
+          <div class="mapping-item"><span class="label">Space:</span> Horn (hold)</div>
+          <div class="mapping-item"><span class="label">Escape:</span> Power/Sleep</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-title">Event Log</div>
+      <div class="event-log" id="eventLog">
+        <div class="placeholder">No events recorded</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let hidDevice = null, hidConnected = false;
+    let selectedGamepadIndex = null;
+    let activeSource = null;
+    let eventId = 0;
+    const events = [];
+    let wdiState = {
+      forward: 0, turn: 0, speed: 3, mode: 'drive', profile: 1,
+      eStop: false, headlight: false, hazards: false,
+      leftBlinker: false, rightBlinker: false, horn: false,
+      deviceControlActive: false, menuOpen: false
+    };
+    let prevButtonStates = {};
+    let gamepadPollId = null;
+
+    const $ = id => document.getElementById(id);
+
+    // Tab switching
+    $('tabGamepad').onclick = () => {
+      $('tabGamepad').classList.add('active');
+      $('tabKeyboard').classList.remove('active');
+      $('mappingGamepad').style.display = 'block';
+      $('mappingKeyboard').style.display = 'none';
+    };
+    $('tabKeyboard').onclick = () => {
+      $('tabKeyboard').classList.add('active');
+      $('tabGamepad').classList.remove('active');
+      $('mappingKeyboard').style.display = 'block';
+      $('mappingGamepad').style.display = 'none';
+    };
+
+    function setMappingTab(source) {
+      if (source === 'keyboard') {
+        $('tabKeyboard').click();
+      } else {
+        $('tabGamepad').click();
+      }
+    }
+
+    // ============ HID Functions ============
+    function showHidError(msg) {
+      $('hidError').textContent = msg;
+      $('hidError').style.display = msg ? 'block' : 'none';
+    }
+
+    function parseHIDReport(reportId, data) {
+      const bytes = Array.from(new Uint8Array(data.buffer));
+      const parsed = { reportId, bytes, hex: bytes.map(b => b.toString(16).padStart(2, '0')).join(' '), axes: [], buttons: [] };
+      if (bytes.length >= 2) {
+        parsed.axes.push({ name: 'X', raw: bytes[0], norm: (bytes[0] - 127) / 127 });
+        parsed.axes.push({ name: 'Y', raw: bytes[1], norm: (bytes[1] - 127) / 127 });
+      }
+      if (bytes.length >= 4) {
+        parsed.axes.push({ name: 'Z', raw: bytes[2], norm: (bytes[2] - 127) / 127 });
+        parsed.axes.push({ name: 'Rz', raw: bytes[3], norm: (bytes[3] - 127) / 127 });
+      }
+      for (let byteIdx = 4; byteIdx < Math.min(bytes.length, 8); byteIdx++) {
+        for (let bit = 0; bit < 8; bit++) {
+          parsed.buttons.push({ id: (byteIdx - 4) * 8 + bit, pressed: !!(bytes[byteIdx] & (1 << bit)) });
+        }
+      }
+      return parsed;
+    }
+
+    function handleHIDReport(e) {
+      const parsed = parseHIDReport(e.reportId, e.data);
+      activeSource = 'hid';
+      setMappingTab('gamepad');
+      processInput({
+        source: 'hid',
+        axes: parsed.axes.map(a => a.norm),
+        buttons: parsed.buttons.map(b => b.pressed),
+        raw: parsed
+      });
+    }
+
+    async function connectHID() {
+      showHidError('');
+      if (!('hid' in navigator)) { showHidError('WebHID not supported. Use Chrome/Edge/Opera.'); return; }
+      try {
+        const devices = await navigator.hid.requestDevice({ filters: [] });
+        if (!devices.length) { showHidError('No device selected'); return; }
+        hidDevice = devices[0];
+        if (!hidDevice.opened) await hidDevice.open();
+
+        let html = `<div class="info-box active"><div class="name">${hidDevice.productName || 'Unknown Device'}<span class="source-badge source-hid">HID</span></div>`;
+        html += `<div class="vid">VID: 0x${hidDevice.vendorId.toString(16).padStart(4, '0')} | PID: 0x${hidDevice.productId.toString(16).padStart(4, '0')}</div></div>`;
+        $('hidInfo').innerHTML = html;
+        $('hidInfo').style.display = 'block';
+
+        hidDevice.addEventListener('inputreport', handleHIDReport);
+        hidConnected = true;
+        activeSource = 'hid';
+        $('hidBtn').textContent = 'Disconnect HID';
+        $('hidBtn').className = 'btn btn-red';
+        updateActiveSource();
+      } catch (err) {
+        showHidError('Connection failed: ' + (err.message || err.name));
+      }
+    }
+
+    async function disconnectHID() {
+      if (hidDevice) {
+        hidDevice.removeEventListener('inputreport', handleHIDReport);
+        try { await hidDevice.close(); } catch (e) { }
+        hidDevice = null;
+      }
+      hidConnected = false;
+      if (activeSource === 'hid') activeSource = selectedGamepadIndex !== null ? 'gamepad' : null;
+      $('hidBtn').textContent = 'Connect HID Device';
+      $('hidBtn').className = 'btn btn-blue';
+      $('hidInfo').style.display = 'none';
+      updateActiveSource();
+    }
+
+    $('hidBtn').onclick = () => hidConnected ? disconnectHID() : connectHID();
+
+    // ============ Gamepad Functions ============
+    // Gamepad button indices (standard mapping):
+    // 0=A/South, 1=B/East, 2=X/West, 3=Y/North, 4=LB, 5=RB, 6=LT, 7=RT, 
+    // 8=Back/Select, 9=Start, 10=L3, 11=R3, 12=DPadUp, 13=DPadDown, 14=DPadLeft, 15=DPadRight
+
+    function updateGamepadList() {
+      const gamepads = navigator.getGamepads();
+      let html = '';
+      let found = false;
+      for (let i = 0; i < gamepads.length; i++) {
+        const gp = gamepads[i];
+        if (gp) {
+          found = true;
+          const selected = selectedGamepadIndex === i;
+          html += `<div class="gamepad-item${selected ? ' selected' : ''}" data-index="${i}">`;
+          html += `<div class="gp-name">${gp.id.split('(')[0].trim()}<span class="source-badge source-gamepad">Gamepad</span></div>`;
+          html += `<div class="gp-id">${gp.buttons.length} buttons, ${gp.axes.length} axes</div></div>`;
+        }
+      }
+      $('gamepadList').innerHTML = html;
+      $('gamepadStatus').textContent = found ? 'Click a controller to select it:' : 'Press a button on your controller to detect it';
+
+      document.querySelectorAll('.gamepad-item').forEach(el => {
+        el.onclick = () => {
+          selectedGamepadIndex = parseInt(el.dataset.index);
+          activeSource = 'gamepad';
+          setMappingTab('gamepad');
+          updateGamepadList();
+          updateActiveSource();
+        };
+      });
+    }
+
+    function pollGamepad() {
+      const gamepads = navigator.getGamepads();
+      updateGamepadList();
+
+      if (selectedGamepadIndex !== null && gamepads[selectedGamepadIndex]) {
+        const gp = gamepads[selectedGamepadIndex];
+        activeSource = 'gamepad';
+        processInput({
+          source: 'gamepad',
+          axes: Array.from(gp.axes),
+          buttons: gp.buttons.map(b => b.pressed),
+          raw: { axes: gp.axes, buttons: gp.buttons }
+        });
+      }
+
+      gamepadPollId = requestAnimationFrame(pollGamepad);
+    }
+
+    window.addEventListener('gamepadconnected', (e) => {
+      if (selectedGamepadIndex === null) {
+        selectedGamepadIndex = e.gamepad.index;
+        activeSource = 'gamepad';
+        setMappingTab('gamepad');
+      }
+      updateGamepadList();
+      updateActiveSource();
+    });
+
+    window.addEventListener('gamepaddisconnected', (e) => {
+      if (selectedGamepadIndex === e.gamepad.index) {
+        selectedGamepadIndex = null;
+        if (activeSource === 'gamepad') activeSource = hidConnected ? 'hid' : null;
+      }
+      updateGamepadList();
+      updateActiveSource();
+    });
+
+    // ============ Shared Input Processing ============
+    function processInput({ source, axes, buttons, raw }) {
+      const btnKey = source + '-btn';
+      if (!prevButtonStates[btnKey]) prevButtonStates[btnKey] = [];
+
+      // Helper for edge detection
+      const justPressed = (i) => buttons[i] && !prevButtonStates[btnKey][i];
+
+      // Drive (only if device control is active)
+      if (wdiState.deviceControlActive && axes.length >= 2) {
+        const x = axes[0], y = axes[1];
+        wdiState.turn = Math.abs(x) > 0.1 ? x : 0;
+        wdiState.forward = Math.abs(y) > 0.1 ? -y : 0;
+      } else if (!wdiState.deviceControlActive) {
+        wdiState.turn = 0;
+        wdiState.forward = 0;
+      }
+
+      // WDI Gamepad Mappings per spec:
+      // BTN_SOUTH (0/A): Emergency stop
+      // BTN_START (9): Device control toggle
+      // BTN_C (2/X): Enable device control  
+      // BTN_MODE (Guide/16?): Disable - not standard, using 8 (Back) for wake/menu
+      // BTN_SELECT (8): Menu / Wake
+      // BTN_TL/TR (4/5): Speed down/up
+      // D-Pad Up (12): Profile increment
+      // D-Pad Down (13): Mode switch
+      // D-Pad Left (14): Left blinker
+      // D-Pad Right (15): Right blinker
+      // BTN_THUMBL (10): Headlight
+      // BTN_WEST (3/Y): Hazard lights
+      // BTN_THUMBR (11): Horn (while pressed)
+
+      wdiState.eStop = buttons[0] || false;
+      wdiState.horn = buttons[11] || false;
+
+      if (justPressed(9)) wdiState.deviceControlActive = !wdiState.deviceControlActive; // Start = toggle
+      if (justPressed(8)) wdiState.menuOpen = !wdiState.menuOpen; // Back = menu
+      if (justPressed(4) && wdiState.speed > 1) wdiState.speed--;
+      if (justPressed(5) && wdiState.speed < 5) wdiState.speed++;
+      if (justPressed(12)) wdiState.profile = wdiState.profile >= 5 ? 1 : wdiState.profile + 1;
+      if (justPressed(13)) wdiState.mode = wdiState.mode === 'drive' ? 'seating' : 'drive';
+      if (justPressed(14)) wdiState.leftBlinker = !wdiState.leftBlinker;
+      if (justPressed(15)) wdiState.rightBlinker = !wdiState.rightBlinker;
+      if (justPressed(10)) wdiState.headlight = !wdiState.headlight;
+      if (justPressed(3)) wdiState.hazards = !wdiState.hazards;
+
+      prevButtonStates[btnKey] = [...buttons];
+
+      updateWDIDisplay();
+      updateRawDisplay(source, axes, buttons, raw);
+
+      const pressedBtns = buttons.map((b, i) => b ? i : -1).filter(i => i >= 0);
+      if (pressedBtns.length > 0 || Math.abs(wdiState.forward) > 0.1 || Math.abs(wdiState.turn) > 0.1) {
+        addEvent(source, axes, pressedBtns, raw);
+      }
+    }
+
+    function updateActiveSource() {
+      let html = '';
+      if (activeSource === 'hid' && hidDevice) {
+        html = `<span class="name">${hidDevice.productName || 'HID Device'}</span><span class="source-badge source-hid">HID</span>`;
+      } else if (activeSource === 'gamepad' && selectedGamepadIndex !== null) {
+        const gp = navigator.getGamepads()[selectedGamepadIndex];
+        if (gp) html = `<span class="name">${gp.id.split('(')[0].trim()}</span><span class="source-badge source-gamepad">Gamepad</span>`;
+      } else if (activeSource === 'keyboard') {
+        html = `<span class="name">Keyboard</span><span class="source-badge source-kbd">Keyboard</span>`;
+      } else {
+        html = '<span style="color:#6b7280;">None connected</span>';
+      }
+      $('activeSource').innerHTML = html;
+    }
+
+    function getWDICommand() {
+      if (!wdiState.deviceControlActive) return { cmd: 'CONTROL DISABLED', cls: 'bg-gray' };
+      if (wdiState.eStop) return { cmd: 'EMERGENCY_STOP', cls: 'bg-red' };
+      if (wdiState.mode === 'seating') {
+        if (Math.abs(wdiState.forward) > 0.1) return { cmd: `SEATING: ${wdiState.forward > 0 ? 'UP' : 'DOWN'} ${Math.abs(wdiState.forward * 100).toFixed(0)}%`, cls: 'bg-purple' };
+        return { cmd: 'SEATING: IDLE', cls: 'bg-purple-light' };
+      }
+      const f = wdiState.forward, t = wdiState.turn;
+      if (Math.abs(f) < 0.1 && Math.abs(t) < 0.1) return { cmd: 'DRIVE: STOPPED', cls: 'bg-gray' };
+      let dir = '';
+      if (f > 0.1) dir = 'FORWARD'; else if (f < -0.1) dir = 'REVERSE';
+      if (t > 0.1) dir += dir ? ' + RIGHT' : 'RIGHT'; else if (t < -0.1) dir += dir ? ' + LEFT' : 'LEFT';
+      return { cmd: `DRIVE: ${dir} ${(Math.max(Math.abs(f), Math.abs(t)) * 100).toFixed(0)}%`, cls: 'bg-green' };
+    }
+
+    function updateWDIDisplay() {
+      // Device control indicator
+      const ctrlInd = $('controlIndicator');
+      if (wdiState.deviceControlActive) {
+        ctrlInd.className = 'control-indicator control-active';
+        ctrlInd.textContent = 'DEVICE CONTROL: ACTIVE';
+      } else {
+        ctrlInd.className = 'control-indicator control-inactive';
+        ctrlInd.textContent = 'DEVICE CONTROL: INACTIVE';
+      }
+
+      const cmd = getWDICommand();
+      const cmdEl = $('commandDisplay');
+      cmdEl.className = 'command-display ' + cmd.cls;
+      cmdEl.querySelector('.cmd').textContent = cmd.cmd;
+
+      $('joystickKnob').style.left = (50 + wdiState.turn * 40) + '%';
+      $('joystickKnob').style.top = (50 - wdiState.forward * 40) + '%';
+
+      $('modeValue').textContent = wdiState.mode.toUpperCase();
+      $('modeValue').style.color = wdiState.mode === 'drive' ? '#4ade80' : '#c084fc';
+      $('speedValue').textContent = wdiState.speed + '/5';
+      $('profileValue').textContent = wdiState.profile;
+      $('estopItem').className = 'status-item' + (wdiState.eStop ? ' active' : '');
+      $('estopValue').textContent = wdiState.eStop ? 'ACTIVE' : 'Off';
+
+      $('indLeft').className = 'indicator' + (wdiState.leftBlinker ? ' on-orange' : '');
+      $('indLight').className = 'indicator' + (wdiState.headlight ? ' on-yellow' : '');
+      $('indHazard').className = 'indicator' + (wdiState.hazards ? ' on-red' : '');
+      $('indHorn').className = 'indicator' + (wdiState.horn ? ' on-blue' : '');
+      $('indRight').className = 'indicator' + (wdiState.rightBlinker ? ' on-orange' : '');
+    }
+
+    function updateRawDisplay(source, axes, buttons, raw) {
+      const axisNames = source === 'gamepad' ? ['LX', 'LY', 'RX', 'RY'] : ['X', 'Y', 'Z', 'Rz'];
+      let html = '';
+
+      if (source === 'hid' && raw.hex) {
+        html += `<div class="raw-box"><div class="label">Report ID: ${raw.reportId}</div><div class="hex">${raw.hex}</div></div>`;
+      }
+
+      html += '<div class="raw-box"><div class="label">Axes</div>';
+      axes.forEach((val, i) => {
+        const pct = ((val + 1) / 2) * 100;
+        const name = axisNames[i] || `A${i}`;
+        html += `<div class="axis-row"><span class="name">${name}:</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span class="value">${val.toFixed(3)}</span></div>`;
+      });
+      html += '</div>';
+
+      html += '<div class="raw-box"><div class="label">Buttons</div><div class="button-grid">';
+      buttons.forEach((pressed, i) => {
+        html += `<div class="button-item${pressed ? ' pressed' : ''}">${i}</div>`;
+      });
+      html += '</div></div>';
+
+      $('rawDataContainer').innerHTML = html;
+    }
+
+    let lastEventTime = 0;
+    function addEvent(source, axes, pressedBtns, raw) {
+      const now = Date.now();
+      if (now - lastEventTime < 50) return;
+      lastEventTime = now;
+
+      const ts = new Date().toISOString().split('T')[1].slice(0, -1);
+      const axisStr = axes.slice(0, 4).map(a => a.toFixed(2)).join(', ');
+
+      events.unshift({ id: eventId++, ts, source, axes: axisStr, btns: pressedBtns });
+      if (events.length > 100) events.pop();
+
+      let html = '';
+      events.slice(0, 50).forEach(e => {
+        const srcCls = e.source === 'hid' ? 'src-hid' : (e.source === 'keyboard' ? 'src-kbd' : 'src-gp');
+        const srcLabel = e.source === 'hid' ? 'HID' : (e.source === 'keyboard' ? 'KEY' : 'GP');
+        html += `<div class="event-row"><span class="ts">${e.ts}</span><span class="src ${srcCls}">${srcLabel}</span><span class="data">[${e.axes}]</span>`;
+        if (e.btns.length) html += `<span class="btns">${e.source === 'keyboard' ? e.btns.join('+') : 'BTN:[' + e.btns.join(',') + ']'}</span>`;
+        html += '</div>';
+      });
+      $('eventLog').innerHTML = html || '<div class="placeholder">No events recorded</div>';
+    }
+
+    // Start gamepad polling
+    pollGamepad();
+
+    // ============ Keyboard Functions ============
+    const keyboardCapture = $('keyboardCapture');
+    const keysPressed = new Set();
+    let keyboardActive = false;
+    let prevKeyStates = {};
+
+    // WDI Keyboard mappings per spec
+    const keyMap = {
+      'ArrowUp': 'forward', 'KeyW': 'forward',
+      'ArrowDown': 'backward', 'KeyS': 'backward',
+      'ArrowLeft': 'left', 'KeyA': 'left',
+      'ArrowRight': 'right', 'KeyD': 'right',
+      'Space': 'horn',
+      'PageUp': 'estop', 'PageDown': 'estop', 'KeyB': 'estop',
+      'Enter': 'deviceControlToggle',
+      'Escape': 'powerSleep',
+      'KeyO': 'menu',
+      'Tab': 'modeSwitch',
+      'KeyL': 'headlight',
+      'KeyH': 'hazards',
+      'Comma': 'profileDown', 'Period': 'profileUp',
+      'Minus': 'speedDown', 'Equal': 'speedUp',
+      'Digit1': 'speed1', 'Digit2': 'speed2', 'Digit3': 'speed3',
+      'Digit4': 'speed4', 'Digit5': 'speed5',
+    };
+
+    // Shift + comma/period for blinkers
+    const shiftKeyMap = {
+      'Comma': 'leftBlinker',
+      'Period': 'rightBlinker',
+    };
+
+    function processKeyboard(shiftHeld) {
+      let fwd = 0, turn = 0;
+
+      // Drive only if device control is active
+      if (wdiState.deviceControlActive) {
+        if (keysPressed.has('forward')) fwd = 1;
+        if (keysPressed.has('backward')) fwd = -1;
+        if (keysPressed.has('left')) turn = -1;
+        if (keysPressed.has('right')) turn = 1;
+      }
+
+      wdiState.forward = fwd;
+      wdiState.turn = turn;
+      wdiState.eStop = keysPressed.has('estop');
+      wdiState.horn = keysPressed.has('horn');
+
+      updateWDIDisplay();
+      updateKeyboardRawDisplay();
+    }
+
+    function updateKeyboardRawDisplay() {
+      if (!keyboardActive || keysPressed.size === 0) return;
+
+      const actions = Array.from(keysPressed);
+      let html = '<div class="raw-box"><div class="label">Active Keys</div>';
+      html += `<div style="color:#4ade80;font-family:monospace;">${actions.join(', ')}</div></div>`;
+
+      html += '<div class="raw-box"><div class="label">Keyboard Axes (Digital)</div>';
+      const axes = [wdiState.turn, -wdiState.forward];
+      ['X', 'Y'].forEach((name, i) => {
+        const pct = ((axes[i] + 1) / 2) * 100;
+        html += `<div class="axis-row"><span class="name">${name}:</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span class="value">${axes[i].toFixed(1)}</span></div>`;
+      });
+      html += '</div>';
+
+      $('rawDataContainer').innerHTML = html;
+    }
+
+    keyboardCapture.addEventListener('focus', () => {
+      keyboardCapture.classList.add('active');
+      keyboardCapture.querySelector('div').textContent = 'Keyboard active - press keys';
+      keyboardActive = true;
+      activeSource = 'keyboard';
+      setMappingTab('keyboard');
+      updateActiveSource();
+    });
+
+    keyboardCapture.addEventListener('blur', () => {
+      keyboardCapture.classList.remove('active');
+      keyboardCapture.querySelector('div').textContent = 'Click here to capture keyboard';
+      keysPressed.clear();
+      $('activeKeys').textContent = '';
+      keyboardActive = false;
+      wdiState.forward = 0;
+      wdiState.turn = 0;
+      wdiState.eStop = false;
+      wdiState.horn = false;
+      updateWDIDisplay();
+      if (activeSource === 'keyboard') {
+        activeSource = selectedGamepadIndex !== null ? 'gamepad' : (hidConnected ? 'hid' : null);
+        updateActiveSource();
+      }
+    });
+
+    keyboardCapture.addEventListener('keydown', (e) => {
+      e.preventDefault();
+
+      const shiftHeld = e.shiftKey;
+      let action = shiftHeld && shiftKeyMap[e.code] ? shiftKeyMap[e.code] : keyMap[e.code];
+      if (!action) return;
+
+      const wasPressed = keysPressed.has(action);
+
+      if (!wasPressed) {
+        // Edge-triggered actions
+        if (action === 'deviceControlToggle') wdiState.deviceControlActive = !wdiState.deviceControlActive;
+        if (action === 'modeSwitch') wdiState.mode = wdiState.mode === 'drive' ? 'seating' : 'drive';
+        if (action === 'headlight') wdiState.headlight = !wdiState.headlight;
+        if (action === 'hazards') wdiState.hazards = !wdiState.hazards;
+        if (action === 'leftBlinker') wdiState.leftBlinker = !wdiState.leftBlinker;
+        if (action === 'rightBlinker') wdiState.rightBlinker = !wdiState.rightBlinker;
+        if (action === 'menu') wdiState.menuOpen = !wdiState.menuOpen;
+        if (action === 'profileUp') wdiState.profile = wdiState.profile >= 5 ? 1 : wdiState.profile + 1;
+        if (action === 'profileDown') wdiState.profile = wdiState.profile <= 1 ? 5 : wdiState.profile - 1;
+        if (action === 'speedUp' && wdiState.speed < 5) wdiState.speed++;
+        if (action === 'speedDown' && wdiState.speed > 1) wdiState.speed--;
+        if (action.startsWith('speed') && !action.includes('Up') && !action.includes('Down')) {
+          const num = parseInt(action.replace('speed', ''));
+          if (num >= 1 && num <= 5) wdiState.speed = num;
+        }
+
+        addEvent('keyboard', [wdiState.turn, -wdiState.forward], [action], null);
+      }
+
+      keysPressed.add(action);
+      $('activeKeys').textContent = Array.from(keysPressed).join(' + ');
+      processKeyboard(shiftHeld);
+    });
+
+    keyboardCapture.addEventListener('keyup', (e) => {
+      e.preventDefault();
+      const shiftHeld = e.shiftKey;
+      let action = shiftKeyMap[e.code] || keyMap[e.code];
+      if (!action) return;
+
+      keysPressed.delete(action);
+      // Also delete the shift variant if releasing the base key
+      if (shiftKeyMap[e.code]) keysPressed.delete(shiftKeyMap[e.code]);
+      if (keyMap[e.code]) keysPressed.delete(keyMap[e.code]);
+
+      $('activeKeys').textContent = Array.from(keysPressed).join(' + ') || '';
+      processKeyboard(shiftHeld);
+    });
+  </script>
+</body>
+
+</html>
