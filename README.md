@@ -91,7 +91,7 @@ In addition to the specific actuators, chairs may be programmed with a number of
 * Enable/disable airplane mode/communications
 * Wheelchair specific optional commands (e.g. triggering of automated features)
 
-## WDI Implementer Guidance
+## WDI Device Implementer Guidance
 The WDI builds upon existing specifications for using [Human Interface Devices (HID)](https://en.wikipedia.org/wiki/Human_interface_device).
 
 ### Compatibility Tester
@@ -100,10 +100,10 @@ The WDI builds upon existing specifications for using [Human Interface Devices (
 It displays raw HID events from gamepads, joysticks, and keyboards alongside the translated wheelchair commands they would produce. It has been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly.
 
 ### USB
-The current version of USB implementation guidance is linked: [here](/docs/usb/wdi-usb-interface.md)
+[USB mapping and implementation guidance](/docs/usb/wdi-usb-interface.md)
 
 ### Bluetooth
-The current version of BLE implementation guidance is linked: [here](/docs/ble/wdi-ble-interface.md)
+[BLE mapping and implementation guidance](/docs/ble/wdi-ble-interface.md)
 
 ### Other Physical Interfaces
 Expansion of the WDI definition to cover other physical interfaces is anticipated. HID is also supported on the following interfaces:
@@ -118,8 +118,9 @@ Some common input devices require a driver or may work differently with a driver
 | Xbox | Requires driver (xpad) |
 | Playstation 5 (DualSense) | Can work generically, but has right stick axes and buttons mapped differently with driver. Motion and touchpad capabilities require driver |
 
-## WDI User Guidance
-Known implementations of the WDI and any specific information about those implementations can be found [here](docs/implementations/)
+## WDI User Guidance (Known Implementers)
+Implementations may have their own additions and limitations, which are captured here in the
+[list of known host-side implementations](/docs/implementations/implementations.md)
 
 ## License
 The WDI is open for use under an Apache 2.0 License.
