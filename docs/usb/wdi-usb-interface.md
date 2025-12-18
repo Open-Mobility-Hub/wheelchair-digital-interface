@@ -1,17 +1,16 @@
 # USB Wheelchair Digital Interface
 ## Background
-The WDI relies on the existing [USB HID Specifications](https://www.usb.org/hid) and the corresponding [Linux input event interface (evdev)](https://docs.kernel.org/input/input.html#evdev) to translate user input into actions on the wheelchair. Creating a device that meets the USB HID spec will not be covered here, but some example HID descriptors can be seen [here](example-report-descriptors/). This page will only specify what USB HID usages and events can be used to control the wheelchair.
+The WDI relies on the existing [USB HID Specifications](https://www.usb.org/hid) and the corresponding [Linux input event interface (evdev)](https://docs.kernel.org/input/input.html#evdev) to translate user input into actions on the wheelchair. Creating a device that meets the USB HID spec will not be covered here, but some example HID descriptors can be seen [here](example-report-descriptors.md). This page will only specify what USB HID usages and events can be used to control the wheelchair.
 
- In the WDI, the two main HID usages are gamepad for proportional control and keyboard for digital control. Relative devices such as mice are not supported.
+In the WDI, the two main HID usages are gamepad for proportional control and keyboard for digital control. Relative devices such as mice are not supported.
 
- ## Behavior
- The WDI is event based, which means it maintains the latest input event until a new one is received. For example, if a a joystick report indicates that the chair should drive forward, it will continue to drive forward until a new joystick report indicates otherwise.
+## Behavior
+The WDI is event based, which means it maintains the latest input event until a new one is received. For example, if a a joystick report indicates that the chair should drive forward, it will continue to drive forward until a new joystick report indicates otherwise.
 
- Button presses and releases are separate events, and the WDI acts upon a button press for non-driving actions. This means that the duration of the press does not matter. Any driving done through a digital button press will stop when the button is released. Multiple buttons can be pressed simultaneously.
+Button presses and releases are separate events, and the WDI acts upon a button press for non-driving actions. This means that the duration of the press does not matter. Any driving done through a digital button press will stop when the button is released. Multiple buttons can be pressed simultaneously.
 
- ### Active Control
- Only one device is allowed to control movement on the chair at a time. A device takes or gives up control by sending a specific button press (listed as "Enable device control" below). A device that is not in control may still affect other aspects of the chair such as modifying speed setting, profile, and controlling the lights.
-
+### Active Control
+Only one device is allowed to control movement on the chair at a time. A device takes or gives up control by sending a specific button press (listed as "Enable device control" below). A device that is not in control may still affect other aspects of the chair such as modifying speed setting, profile, and controlling the lights.
 
 ## Button Mapping
 This section defines what input events lead to what output on the chair.
@@ -24,7 +23,7 @@ When the HID is defined as a gamepad, the button usages get mapped to particular
 0x29, 0x0f,        //   Usage Maximum (0x0f)
 ```
 
-https://gitlab.freedesktop.org/libevdev/libevdev/-/blob/master/include/linux/linux/input-event-codes.h#L380
+[Linux Event Codes](https://gitlab.freedesktop.org/libevdev/libevdev/-/blob/master/include/linux/linux/input-event-codes.h#L380)
 ```
  BTN_GAMEPAD / 	BTN_SOUTH / BTN_A
  BTN_EAST / BTN_B
@@ -46,7 +45,7 @@ https://gitlab.freedesktop.org/libevdev/libevdev/-/blob/master/include/linux/lin
 If the usage extends past the typical 15 gamepad buttons, then the buttons start getting mapped to `BTN_TRIGGER_HAPPYX`.These typically are not present on off-the-shelf gamepad devices.
 
 ### Implementation-dependant Buttons
-Since what needs to be controlled varies depending on the WDI [implementation](../implementations/), the following standard buttons and axes are reserved to be specific to the implementation:
+Since what needs to be controlled varies depending on the WDI [implementation](../implementations/implementations.md), the following standard buttons and axes are reserved to be specific to the implementation:
 
 **Gamepad:**
 * BTN_EAST
@@ -63,13 +62,14 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 
 
 ### Drive Actions
+
 | Action | Keyboard Controls | Gamepad Controls |
 |--------|------|-----|
-| Drive forward | 'w' \| up arrow | Y axis (towards min val) |
-| Drive backward | 's' \| down arrow | Y axis (towards max val) |
-| Drive left | 'a' \| left arrow | X axis (towards min val) |
-| Drive right | 'd' \| right arrow | X axis (towards max val) |
-| Emergency stop | page up \| page down \| 'b' \| 'SHIFT + F5 | BTN_SOUTH |
+| Drive forward | 'w' OR up arrow | Y axis (towards min val) |
+| Drive backward | 's' OR down arrow | Y axis (towards max val) |
+| Drive left | 'a' OR left arrow | X axis (towards min val) |
+| Drive right | 'd' OR right arrow | X axis (towards max val) |
+| Emergency stop | page up OR page down OR 'b' OR 'SHIFT + F5 | BTN_SOUTH |
 | Device control toggle | enter | BTN_START |
 | Enable device control | None | BTN_C |
 | Disable device control | None | BTN_MODE |
@@ -78,6 +78,8 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 
 ### Chair Control Actions
 User menu control matches drive controls.
+
+
 | Action | Keyboard Controls | Gamepad Controls |
 |--------|------|-----|
 | Power/Sleep toggle | escape | BTN_SELECT to wake up (slept through user menu) |
@@ -87,8 +89,8 @@ User menu control matches drive controls.
 | Switch mode | tab | d-pad down (ABS_HAT0Y = 1) |
 | Headlight toggle | 'l' | BTN_THUMBL |
 | Hazard lights | 'h' | BTN_WEST |
-| Left blinker | '<' \| SHIFT + comma | d-pad left(ABS_HAT0X = -1) |
-| Right blinker | '>' \| SHIFT + period | d-pad right(ABS_HAT0X = 1) |
+| Left blinker | '<' OR SHIFT + comma | d-pad left(ABS_HAT0X = -1) |
+| Right blinker | '>' OR SHIFT + period | d-pad right(ABS_HAT0X = 1) |
 | Horn | spacebar (while pressed) | BTN_THUMBR (while pressed) |
 
 ### Seating

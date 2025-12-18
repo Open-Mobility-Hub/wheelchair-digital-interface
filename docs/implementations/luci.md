@@ -9,6 +9,7 @@ LUCI implements the WDI for USB via the LuciLink Hub. Devices plugged into the L
 * Unplugging any active device deactivates the device and returns control to the wheelchair electronics.
 
 ## Custom Button Mappings
+
 | Action | Keyboard | Gamepad |
 |-----|---|---|
 | Override | caps lock | BTN_EAST |
