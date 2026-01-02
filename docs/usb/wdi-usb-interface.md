@@ -12,6 +12,13 @@ Button presses and releases are separate events, and the WDI acts upon a button 
 ### Active Control
 Only one device is allowed to control movement on the chair at a time. A device takes or gives up control by sending a specific button press (listed as "Enable device control" below). A device that is not in control may still affect other aspects of the chair such as modifying speed setting, profile, and controlling the lights.
 
+#### Composite HIDs
+These are devices that provide multiple, separate HIDs from the same physical device. For example, a touchpad may show up as both a mouse and a touchpad, and the Playstation 5 controller shows up as the base gamepad, a touchpad, and a gyro.
+
+For most situations, it works fine to combine all the events from the same physical device into one for the purposes of active control; however, this causes problems when the separate interfaces from the same device have overlapping drive events. In the case of the Playstation 5 controller, all three interfaces provide the ABS_X/Y drive events, which would mean that all three would fight over driving (with the gyro most likely overwrite anything the others send).
+
+To address this, composite HIDs are combined into one "device" for the purposes of active control in all cases **except** when the ABS axes overlap.
+
 ## Button Mapping
 This section defines what input events lead to what output on the chair.
 ### Note on Gamepad Usage Button Mapping
