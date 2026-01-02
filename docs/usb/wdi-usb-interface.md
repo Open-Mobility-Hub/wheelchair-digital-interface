@@ -12,6 +12,13 @@ Button presses and releases are separate events, and the WDI acts upon a button 
 ### Active Control
 Only one device is allowed to control movement on the chair at a time. A device takes or gives up control by sending a specific button press (listed as "Enable device control" below). A device that is not in control may still affect other aspects of the chair such as modifying speed setting, profile, and controlling the lights.
 
+#### Composite HIDs
+These are devices that provide multiple, separate HIDs from the same physical device. For example, a touchpad may show up as both a mouse and a touchpad, and the Playstation 5 controller shows up as the base gamepad, a touchpad, and a gyro.
+
+For most situations, it works fine to combine all the events from the same physical device into one for the purposes of active control; however, this causes problems when the separate interfaces from the same device have overlapping drive events. In the case of the Playstation 5 controller, all three interfaces provide the ABS_X/Y drive events, which would mean that all three would fight over driving (with the gyro most likely overwrite anything the others send).
+
+To address this, composite HIDs are combined into one "device" for the purposes of active control in all cases **except** when the ABS axes overlap.
+
 ## Button Mapping
 This section defines what input events lead to what output on the chair.
 ### Note on Gamepad Usage Button Mapping
@@ -63,17 +70,29 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 
 ### Drive Actions
 
-| Action | Keyboard Controls | Gamepad Controls |
-|--------|------|-----|
-| Drive forward | 'w' OR up arrow | Y axis (towards min val) |
-| Drive backward | 's' OR down arrow | Y axis (towards max val) |
-| Drive left | 'a' OR left arrow | X axis (towards min val) |
-| Drive right | 'd' OR right arrow | X axis (towards max val) |
-| Emergency stop | page up OR page down OR 'b' OR 'SHIFT + F5 | BTN_SOUTH |
-| Device control toggle | enter | BTN_START |
-| Enable device control | None | BTN_C |
-| Disable device control | None | BTN_MODE |
+| Action | Keyboard Controls | Gamepad Controls | Touchpad Controls |
+|--------|------|-----|-----|
+| Drive forward | 'w' OR up arrow | ABS_Y axis (towards min val) | Same as gamepad |
+| Drive backward | 's' OR down arrow | ABS_Y axis (towards max val) | Same as gamepad |
+| Drive left | 'a' OR left arrow | ABS_X axis (towards min val) | Same as gamepad |
+| Drive right | 'd' OR right arrow | ABS_X axis (towards max val) | Same as gamepad |
+| Reset Movement | - | - | BTN_TOUCH Released |
+| Emergency stop | see below | BTN_SOUTH | - |
+| Device control toggle | enter | BTN_START | BTN_LEFT |
+| Enable device control | None | BTN_C | - |
+| Disable device control | None | BTN_MODE | - |
 
+
+#### Emergency Stop
+
+E-stopping has many keyboard mappings in order to support use of slide advancers. Based on testing several off-the-shelf devices, these actions should cover most buttons on most slide advancers.
+
+* Page up
+* Page down
+* 'b'
+* SHIFT + F5
+* Escape
+* ALT + Tab
 
 
 ### Chair Control Actions
