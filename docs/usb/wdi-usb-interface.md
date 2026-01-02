@@ -63,16 +63,18 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 
 ### Drive Actions
 
-| Action | Keyboard Controls | Gamepad Controls |
-|--------|------|-----|
-| Drive forward | 'w' OR up arrow | Y axis (towards min val) |
-| Drive backward | 's' OR down arrow | Y axis (towards max val) |
-| Drive left | 'a' OR left arrow | X axis (towards min val) |
-| Drive right | 'd' OR right arrow | X axis (towards max val) |
-| Emergency stop | see below | BTN_SOUTH |
-| Device control toggle | enter | BTN_START |
-| Enable device control | None | BTN_C |
-| Disable device control | None | BTN_MODE |
+| Action | Keyboard Controls | Gamepad Controls | Touchpad Controls |
+|--------|------|-----|-----|
+| Drive forward | 'w' OR up arrow | ABS_Y axis (towards min val) | Same as gamepad |
+| Drive backward | 's' OR down arrow | ABS_Y axis (towards max val) | Same as gamepad |
+| Drive left | 'a' OR left arrow | ABS_X axis (towards min val) | Same as gamepad |
+| Drive right | 'd' OR right arrow | ABS_X axis (towards max val) | Same as gamepad |
+| Reset Movement | - | - | BTN_TOUCH Released |
+| Emergency stop | see below | BTN_SOUTH | - |
+| Device control toggle | enter | BTN_START | BTN_LEFT |
+| Enable device control | None | BTN_C | - |
+| Disable device control | None | BTN_MODE | - |
+
 
 #### Emergency Stop
 
