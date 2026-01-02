@@ -69,11 +69,21 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 | Drive backward | 's' OR down arrow | Y axis (towards max val) |
 | Drive left | 'a' OR left arrow | X axis (towards min val) |
 | Drive right | 'd' OR right arrow | X axis (towards max val) |
-| Emergency stop | page up OR page down OR 'b' OR 'SHIFT + F5 | BTN_SOUTH |
+| Emergency stop | see below | BTN_SOUTH |
 | Device control toggle | enter | BTN_START |
 | Enable device control | None | BTN_C |
 | Disable device control | None | BTN_MODE |
 
+#### Emergency Stop
+
+E-stopping has many keyboard mappings in order to support use of slide advancers. Based on testing several off-the-shelf devices, these actions should cover most buttons on most slide advancers.
+
+* Page up
+* Page down
+* 'b'
+* SHIFT + F5
+* Escape
+* ALT + Tab
 
 
 ### Chair Control Actions
