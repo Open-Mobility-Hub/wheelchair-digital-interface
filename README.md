@@ -1,5 +1,8 @@
 # Wheelchair Digital Interface
 The Wheelchair Digital Interface (WDI) API detailed in this project is a modern, two-way communication standard for power wheelchairs built on widely accepted HID protocols.
+For easy switching:
+* [Source Code](https://github.com/Open-Mobility-Hub/wheelchair-digital-interface)
+* [Doc Site](https://open-mobility-hub.github.io/wheelchair-digital-interface/)
 
 ## Purpose
 The purpose of the open WDI standard is: 
