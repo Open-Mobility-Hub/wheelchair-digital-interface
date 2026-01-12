@@ -1,4 +1,4 @@
-<!-- Copyright 2025 LUCI Mobility, Inc.
+<!-- Copyright 2026 LUCI Mobility, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -548,7 +548,6 @@ limitations under the License. -->
     </header>
 
     <div class="grid grid-3">
-      <!-- Connection Panel -->
       <div class="panel">
         <div class="panel-title">Device Connection</div>
 
@@ -560,6 +559,11 @@ limitations under the License. -->
         <div class="divider"></div>
 
         <div class="section-label">Gamepad API (Xbox, PlayStation, etc.)</div>
+        <div id="browserWarning"
+          style="display:none;background:#78350f;border:1px solid #f59e0b;border-radius:0.375rem;padding:0.5rem;margin-bottom:0.5rem;font-size:0.75rem;color:#fef3c7;">
+          ⚠️ <strong>Chrome detected:</strong> Button indices may be remapped for custom devices. Use Firefox for
+          accurate WDI testing.
+        </div>
         <div id="gamepadStatus" style="font-size:0.875rem;color:#9ca3af;margin-bottom:0.5rem;">Press a button on your
           controller to detect it</div>
         <div id="gamepadList" class="gamepad-list"></div>
@@ -581,9 +585,13 @@ limitations under the License. -->
         <div id="activeSource" class="info-box">
           <span style="color:#6b7280;">None connected</span>
         </div>
+
+        <div class="divider"></div>
+        <label style="font-size:0.75rem;color:#9ca3af;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+          <input type="checkbox" id="debugMode"> Enable debug logging (check console)
+        </label>
       </div>
 
-      <!-- WDI Output Panel -->
       <div class="panel">
         <div class="panel-title">WDI Wheelchair Output</div>
 
@@ -618,9 +626,40 @@ limitations under the License. -->
           <div class="indicator" id="indHorn">🔊</div>
           <div class="indicator" id="indRight">▶</div>
         </div>
+
+        <div class="divider"></div>
+        <div class="section-label">Seating Controls</div>
+        <div id="seatingMemory" style="font-size:0.75rem;color:#6b7280;margin-bottom:0.5rem;">Memory Position: <span
+            id="memoryValue" style="color:#9ca3af;">None</span></div>
+        <div id="seatingActuators"
+          style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.25rem;font-size:0.7rem;">
+          <div class="status-item" id="actTilt" style="padding:0.375rem;text-align:center;"><span
+              class="label">Tilt</span>
+            <div id="actTiltDir" style="color:#6b7280;">-</div>
+          </div>
+          <div class="status-item" id="actRecline" style="padding:0.375rem;text-align:center;"><span
+              class="label">Recline</span>
+            <div id="actReclineDir" style="color:#6b7280;">-</div>
+          </div>
+          <div class="status-item" id="actLegrest" style="padding:0.375rem;text-align:center;"><span
+              class="label">Legrest</span>
+            <div id="actLegrestDir" style="color:#6b7280;">-</div>
+          </div>
+          <div class="status-item" id="actElevate" style="padding:0.375rem;text-align:center;"><span
+              class="label">Elevate</span>
+            <div id="actElevateDir" style="color:#6b7280;">-</div>
+          </div>
+          <div class="status-item" id="actFootplates" style="padding:0.375rem;text-align:center;"><span
+              class="label">Footplates</span>
+            <div id="actFootplatesDir" style="color:#6b7280;">-</div>
+          </div>
+          <div class="status-item" id="actStand" style="padding:0.375rem;text-align:center;"><span
+              class="label">Stand</span>
+            <div id="actStandDir" style="color:#6b7280;">-</div>
+          </div>
+        </div>
       </div>
 
-      <!-- Raw Data Panel -->
       <div class="panel">
         <div class="panel-title">Raw Input Data</div>
         <div id="rawDataContainer">
@@ -629,7 +668,6 @@ limitations under the License. -->
       </div>
     </div>
 
-    <!-- Mapping Reference -->
     <div class="panel" style="margin-top:1rem">
       <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>WDI Button Mapping Reference</span>
@@ -653,6 +691,11 @@ limitations under the License. -->
           <div class="mapping-item"><span class="label">Y (West):</span> Hazard Lights</div>
           <div class="mapping-item"><span class="label">R3 (Right Stick):</span> Horn (hold)</div>
         </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;"><strong>Custom HID:</strong> BTN_C (btn 17) =
+          Enable Control, BTN_MODE (btn 16) = Disable Control (edge-triggered on press)</p>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.5rem;"><strong>Seating:</strong> Uses BTN_TRIGGER_HAPPY
+          buttons (20+) not available on standard gamepads. Memory 1-7: BTN 20-26. Actuators use BTN 28-33, with BTN 27
+          as down modifier.</p>
       </div>
       <div id="mappingKeyboard" style="display:none;">
         <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Keyboard controls per WDI spec</p>
@@ -675,7 +718,6 @@ limitations under the License. -->
       </div>
     </div>
 
-    <!-- Event Log -->
     <div class="panel" style="margin-top:1rem">
       <div class="panel-title">Event Log</div>
       <div class="event-log" id="eventLog">
@@ -685,31 +727,58 @@ limitations under the License. -->
   </div>
 
   <script>
-    // State
-    let hidDevice = null, hidConnected = false;
-    let selectedGamepadIndex = null;
-    let activeSource = null;
-    let eventId = 0;
-    const events = [];
-    let wdiState = {
+    var hidDevice = null;
+    var hidConnected = false;
+    var selectedGamepadIndex = null;
+    var activeSource = null;
+    var eventId = 0;
+    var events = [];
+    var wdiState = {
       forward: 0, turn: 0, speed: 3, mode: 'drive', profile: 1,
       eStop: false, headlight: false, hazards: false,
       leftBlinker: false, rightBlinker: false, horn: false,
       deviceControlActive: false, menuOpen: false
     };
-    let prevButtonStates = {};
-    let gamepadPollId = null;
+    var seatingState = {
+      memory: null,
+      tilt: 0, recline: 0, legrest: 0, elevate: 0, footplates: 0, stand: 0
+    };
+    // BTN_TRIGGER_HAPPY button indices
+    // BTN_TRIGGER_HAPPY1 starts at index 20 in Gamepad API
+    var SEATING_BTN = {
+      MEMORY_1: 20,       // BTN_TRIGGER_HAPPY1
+      MEMORY_2: 21,       // BTN_TRIGGER_HAPPY2
+      MEMORY_3: 22,       // BTN_TRIGGER_HAPPY3
+      MEMORY_4: 23,       // BTN_TRIGGER_HAPPY4
+      MEMORY_5: 24,       // BTN_TRIGGER_HAPPY5
+      MEMORY_6: 25,       // BTN_TRIGGER_HAPPY6
+      MEMORY_HOME: 26,    // BTN_TRIGGER_HAPPY7
+      DOWN_MOD: 27,       // BTN_TRIGGER_HAPPY8 = Down/backward modifier
+      TILT: 28,           // BTN_TRIGGER_HAPPY9
+      RECLINE: 29,        // BTN_TRIGGER_HAPPY10
+      LEGREST: 30,        // BTN_TRIGGER_HAPPY11
+      ELEVATE: 31,        // BTN_TRIGGER_HAPPY12
+      FOOTPLATES: 32,     // BTN_TRIGGER_HAPPY13
+      STAND: 33           // BTN_TRIGGER_HAPPY14
+    };
+    var prevButtonStates = {};
+    var gamepadPollId = null;
 
-    const $ = id => document.getElementById(id);
+    function $(id) { return document.getElementById(id); }
 
-    // Tab switching
-    $('tabGamepad').onclick = () => {
+    // Detect Chrome and show warning
+    var isChrome = /Chrome/.test(navigator.userAgent) && !/Edg/.test(navigator.userAgent);
+    if (isChrome) {
+      $('browserWarning').style.display = 'block';
+    }
+
+    $('tabGamepad').onclick = function () {
       $('tabGamepad').classList.add('active');
       $('tabKeyboard').classList.remove('active');
       $('mappingGamepad').style.display = 'block';
       $('mappingKeyboard').style.display = 'none';
     };
-    $('tabKeyboard').onclick = () => {
+    $('tabKeyboard').onclick = function () {
       $('tabKeyboard').classList.add('active');
       $('tabGamepad').classList.remove('active');
       $('mappingKeyboard').style.display = 'block';
@@ -724,15 +793,14 @@ limitations under the License. -->
       }
     }
 
-    // ============ HID Functions ============
     function showHidError(msg) {
       $('hidError').textContent = msg;
       $('hidError').style.display = msg ? 'block' : 'none';
     }
 
     function parseHIDReport(reportId, data) {
-      const bytes = Array.from(new Uint8Array(data.buffer));
-      const parsed = { reportId, bytes, hex: bytes.map(b => b.toString(16).padStart(2, '0')).join(' '), axes: [], buttons: [] };
+      var bytes = Array.from(new Uint8Array(data.buffer));
+      var parsed = { reportId: reportId, bytes: bytes, hex: bytes.map(function (b) { return b.toString(16).padStart(2, '0'); }).join(' '), axes: [], buttons: [] };
       if (bytes.length >= 2) {
         parsed.axes.push({ name: 'X', raw: bytes[0], norm: (bytes[0] - 127) / 127 });
         parsed.axes.push({ name: 'Y', raw: bytes[1], norm: (bytes[1] - 127) / 127 });
@@ -741,8 +809,8 @@ limitations under the License. -->
         parsed.axes.push({ name: 'Z', raw: bytes[2], norm: (bytes[2] - 127) / 127 });
         parsed.axes.push({ name: 'Rz', raw: bytes[3], norm: (bytes[3] - 127) / 127 });
       }
-      for (let byteIdx = 4; byteIdx < Math.min(bytes.length, 8); byteIdx++) {
-        for (let bit = 0; bit < 8; bit++) {
+      for (var byteIdx = 4; byteIdx < Math.min(bytes.length, 8); byteIdx++) {
+        for (var bit = 0; bit < 8; bit++) {
           parsed.buttons.push({ id: (byteIdx - 4) * 8 + bit, pressed: !!(bytes[byteIdx] & (1 << bit)) });
         }
       }
@@ -750,13 +818,13 @@ limitations under the License. -->
     }
 
     function handleHIDReport(e) {
-      const parsed = parseHIDReport(e.reportId, e.data);
+      var parsed = parseHIDReport(e.reportId, e.data);
       activeSource = 'hid';
       setMappingTab('gamepad');
       processInput({
         source: 'hid',
-        axes: parsed.axes.map(a => a.norm),
-        buttons: parsed.buttons.map(b => b.pressed),
+        axes: parsed.axes.map(function (a) { return a.norm; }),
+        buttons: parsed.buttons.map(function (b) { return b.pressed; }),
         raw: parsed
       });
     }
@@ -765,13 +833,13 @@ limitations under the License. -->
       showHidError('');
       if (!('hid' in navigator)) { showHidError('WebHID not supported. Use Chrome/Edge/Opera.'); return; }
       try {
-        const devices = await navigator.hid.requestDevice({ filters: [] });
+        var devices = await navigator.hid.requestDevice({ filters: [] });
         if (!devices.length) { showHidError('No device selected'); return; }
         hidDevice = devices[0];
         if (!hidDevice.opened) await hidDevice.open();
 
-        let html = `<div class="info-box active"><div class="name">${hidDevice.productName || 'Unknown Device'}<span class="source-badge source-hid">HID</span></div>`;
-        html += `<div class="vid">VID: 0x${hidDevice.vendorId.toString(16).padStart(4, '0')} | PID: 0x${hidDevice.productId.toString(16).padStart(4, '0')}</div></div>`;
+        var html = '<div class="info-box active"><div class="name">' + (hidDevice.productName || 'Unknown Device') + '<span class="source-badge source-hid">HID</span></div>';
+        html += '<div class="vid">VID: 0x' + hidDevice.vendorId.toString(16).padStart(4, '0') + ' | PID: 0x' + hidDevice.productId.toString(16).padStart(4, '0') + '</div></div>';
         $('hidInfo').innerHTML = html;
         $('hidInfo').style.display = 'block';
 
@@ -800,52 +868,93 @@ limitations under the License. -->
       updateActiveSource();
     }
 
-    $('hidBtn').onclick = () => hidConnected ? disconnectHID() : connectHID();
-
-    // ============ Gamepad Functions ============
-    // Gamepad button indices (standard mapping):
-    // 0=A/South, 1=B/East, 2=X/West, 3=Y/North, 4=LB, 5=RB, 6=LT, 7=RT, 
-    // 8=Back/Select, 9=Start, 10=L3, 11=R3, 12=DPadUp, 13=DPadDown, 14=DPadLeft, 15=DPadRight
+    $('hidBtn').onclick = function () { hidConnected ? disconnectHID() : connectHID(); };
 
     function updateGamepadList() {
-      const gamepads = navigator.getGamepads();
-      let html = '';
-      let found = false;
-      for (let i = 0; i < gamepads.length; i++) {
-        const gp = gamepads[i];
+      var gamepads = navigator.getGamepads();
+      var currentIds = [];
+      for (var i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) currentIds.push(i + ':' + gamepads[i].id);
+      }
+      var newListKey = currentIds.join('|');
+      if (newListKey === updateGamepadList.lastListKey && updateGamepadList.lastSelected === selectedGamepadIndex) {
+        return;
+      }
+      updateGamepadList.lastListKey = newListKey;
+      updateGamepadList.lastSelected = selectedGamepadIndex;
+
+      var html = '';
+      var found = false;
+      for (var i = 0; i < gamepads.length; i++) {
+        var gp = gamepads[i];
         if (gp) {
           found = true;
-          const selected = selectedGamepadIndex === i;
-          html += `<div class="gamepad-item${selected ? ' selected' : ''}" data-index="${i}">`;
-          html += `<div class="gp-name">${gp.id.split('(')[0].trim()}<span class="source-badge source-gamepad">Gamepad</span></div>`;
-          html += `<div class="gp-id">${gp.buttons.length} buttons, ${gp.axes.length} axes</div></div>`;
+          var selected = selectedGamepadIndex === i;
+          html += '<div class="gamepad-item' + (selected ? ' selected' : '') + '" data-index="' + i + '">';
+          html += '<div class="gp-name">' + gp.id.split('(')[0].trim() + '<span class="source-badge source-gamepad">Gamepad</span></div>';
+          html += '<div class="gp-id">' + gp.buttons.length + ' buttons, ' + gp.axes.length + ' axes, mapping: ' + (gp.mapping || 'non-standard') + '</div></div>';
         }
       }
       $('gamepadList').innerHTML = html;
       $('gamepadStatus').textContent = found ? 'Click a controller to select it:' : 'Press a button on your controller to detect it';
 
-      document.querySelectorAll('.gamepad-item').forEach(el => {
-        el.onclick = () => {
-          selectedGamepadIndex = parseInt(el.dataset.index);
+      var items = document.querySelectorAll('.gamepad-item');
+      for (var j = 0; j < items.length; j++) {
+        items[j].onclick = function (e) {
+          e.stopPropagation();
+          var idx = parseInt(this.dataset.index);
+          console.log('Selecting gamepad:', idx);
+          selectedGamepadIndex = idx;
           activeSource = 'gamepad';
           setMappingTab('gamepad');
+          updateGamepadList.lastSelected = -999;
           updateGamepadList();
           updateActiveSource();
         };
-      });
+      }
     }
+    updateGamepadList.lastListKey = '';
+    updateGamepadList.lastSelected = null;
 
     function pollGamepad() {
-      const gamepads = navigator.getGamepads();
+      var gamepads = navigator.getGamepads();
       updateGamepadList();
 
       if (selectedGamepadIndex !== null && gamepads[selectedGamepadIndex]) {
-        const gp = gamepads[selectedGamepadIndex];
+        var gp = gamepads[selectedGamepadIndex];
         activeSource = 'gamepad';
+
+        var buttonStates = [];
+        for (var i = 0; i < gp.buttons.length; i++) {
+          var b = gp.buttons[i];
+          if (typeof b === 'object') {
+            buttonStates.push(b.pressed || b.value > 0.5);
+          } else {
+            buttonStates.push(!!b);
+          }
+        }
+
+        if ($('debugMode').checked) {
+          var anyPressed = buttonStates.some(function (b) { return b; });
+          var anyAxisMoved = false;
+          for (var k = 0; k < gp.axes.length; k++) {
+            if (Math.abs(gp.axes[k]) > 0.1) anyAxisMoved = true;
+          }
+          if (anyPressed || anyAxisMoved) {
+            console.log('Gamepad raw:', {
+              id: gp.id,
+              mapping: gp.mapping,
+              axes: Array.from(gp.axes),
+              buttons: gp.buttons.map(function (b, i) { return { i: i, pressed: b.pressed, value: b.value }; }),
+              buttonStates: buttonStates
+            });
+          }
+        }
+
         processInput({
           source: 'gamepad',
           axes: Array.from(gp.axes),
-          buttons: gp.buttons.map(b => b.pressed),
+          buttons: buttonStates,
           raw: { axes: gp.axes, buttons: gp.buttons }
         });
       }
@@ -853,7 +962,7 @@ limitations under the License. -->
       gamepadPollId = requestAnimationFrame(pollGamepad);
     }
 
-    window.addEventListener('gamepadconnected', (e) => {
+    window.addEventListener('gamepadconnected', function (e) {
       if (selectedGamepadIndex === null) {
         selectedGamepadIndex = e.gamepad.index;
         activeSource = 'gamepad';
@@ -863,7 +972,7 @@ limitations under the License. -->
       updateActiveSource();
     });
 
-    window.addEventListener('gamepaddisconnected', (e) => {
+    window.addEventListener('gamepaddisconnected', function (e) {
       if (selectedGamepadIndex === e.gamepad.index) {
         selectedGamepadIndex = null;
         if (activeSource === 'gamepad') activeSource = hidConnected ? 'hid' : null;
@@ -872,17 +981,60 @@ limitations under the License. -->
       updateActiveSource();
     });
 
-    // ============ Shared Input Processing ============
-    function processInput({ source, axes, buttons, raw }) {
-      const btnKey = source + '-btn';
-      if (!prevButtonStates[btnKey]) prevButtonStates[btnKey] = [];
+    function processInput(input) {
+      var source = input.source;
+      var axes = input.axes;
+      var buttons = input.buttons;
+      var raw = input.raw;
 
-      // Helper for edge detection
-      const justPressed = (i) => buttons[i] && !prevButtonStates[btnKey][i];
+      var btnKey = source + '-btn';
+      if (!prevButtonStates[btnKey]) {
+        prevButtonStates[btnKey] = [];
+      }
+      var prevStates = prevButtonStates[btnKey];
 
-      // Drive (only if device control is active)
+      function justPressed(i) {
+        var now = buttons[i] || false;
+        var prev = prevStates[i] || false;
+        return now && !prev;
+      }
+
+      // Debug logging for BTN_C (17) and BTN_MODE (16)
+      if ($('debugMode').checked) {
+        var b16 = buttons[16] || false;
+        var b17 = buttons[17] || false;
+        var p16 = prevStates[16] || false;
+        var p17 = prevStates[17] || false;
+        if (b16 || b17 || p16 || p17) {
+          var jp16 = b16 && !p16;
+          var jp17 = b17 && !p17;
+          console.log('BTN_C/MODE debug:', {
+            btn16_now: b16, btn16_prev: p16, btn16_justPressed: jp16,
+            btn17_now: b17, btn17_prev: p17, btn17_justPressed: jp17,
+            prevStateLength: prevStates.length, buttonsLength: buttons.length
+          });
+          if (jp17) console.log('>>> ENABLING CONTROL (btn 17 rising edge)');
+          if (jp16) console.log('>>> DISABLING CONTROL (btn 16 rising edge)');
+        }
+      }
+
+      // BTN_C (17) = enable control, BTN_MODE (16) = disable control
+      if (justPressed(17)) {
+        wdiState.deviceControlActive = true;
+      }
+      if (justPressed(16)) {
+        wdiState.deviceControlActive = false;
+      }
+
+      // Standard indices for HID
+      if (justPressed(2) && buttons.length <= 17) {
+        wdiState.deviceControlActive = true;
+      }
+
+      // Drive only if device control is active
       if (wdiState.deviceControlActive && axes.length >= 2) {
-        const x = axes[0], y = axes[1];
+        var x = axes[0];
+        var y = axes[1];
         wdiState.turn = Math.abs(x) > 0.1 ? x : 0;
         wdiState.forward = Math.abs(y) > 0.1 ? -y : 0;
       } else if (!wdiState.deviceControlActive) {
@@ -890,26 +1042,12 @@ limitations under the License. -->
         wdiState.forward = 0;
       }
 
-      // WDI Gamepad Mappings per spec:
-      // BTN_SOUTH (0/A): Emergency stop
-      // BTN_START (9): Device control toggle
-      // BTN_C (2/X): Enable device control  
-      // BTN_MODE (Guide/16?): Disable - not standard, using 8 (Back) for wake/menu
-      // BTN_SELECT (8): Menu / Wake
-      // BTN_TL/TR (4/5): Speed down/up
-      // D-Pad Up (12): Profile increment
-      // D-Pad Down (13): Mode switch
-      // D-Pad Left (14): Left blinker
-      // D-Pad Right (15): Right blinker
-      // BTN_THUMBL (10): Headlight
-      // BTN_WEST (3/Y): Hazard lights
-      // BTN_THUMBR (11): Horn (while pressed)
-
+      // WDI Gamepad Mappings
       wdiState.eStop = buttons[0] || false;
       wdiState.horn = buttons[11] || false;
 
-      if (justPressed(9)) wdiState.deviceControlActive = !wdiState.deviceControlActive; // Start = toggle
-      if (justPressed(8)) wdiState.menuOpen = !wdiState.menuOpen; // Back = menu
+      if (justPressed(9)) wdiState.deviceControlActive = !wdiState.deviceControlActive;
+      if (justPressed(8)) wdiState.menuOpen = !wdiState.menuOpen;
       if (justPressed(4) && wdiState.speed > 1) wdiState.speed--;
       if (justPressed(5) && wdiState.speed < 5) wdiState.speed++;
       if (justPressed(12)) wdiState.profile = wdiState.profile >= 5 ? 1 : wdiState.profile + 1;
@@ -919,26 +1057,33 @@ limitations under the License. -->
       if (justPressed(10)) wdiState.headlight = !wdiState.headlight;
       if (justPressed(3)) wdiState.hazards = !wdiState.hazards;
 
-      prevButtonStates[btnKey] = [...buttons];
+      // Seating controls (BTN_TRIGGER_HAPPY buttons)
+      processSeating(buttons);
+
+      // Update prev states AFTER all checks
+      prevButtonStates[btnKey] = buttons.slice();
 
       updateWDIDisplay();
       updateRawDisplay(source, axes, buttons, raw);
 
-      const pressedBtns = buttons.map((b, i) => b ? i : -1).filter(i => i >= 0);
+      var pressedBtns = [];
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i] && i !== 16 && i !== 17) pressedBtns.push(i);
+      }
       if (pressedBtns.length > 0 || Math.abs(wdiState.forward) > 0.1 || Math.abs(wdiState.turn) > 0.1) {
         addEvent(source, axes, pressedBtns, raw);
       }
     }
 
     function updateActiveSource() {
-      let html = '';
+      var html = '';
       if (activeSource === 'hid' && hidDevice) {
-        html = `<span class="name">${hidDevice.productName || 'HID Device'}</span><span class="source-badge source-hid">HID</span>`;
+        html = '<span class="name">' + (hidDevice.productName || 'HID Device') + '</span><span class="source-badge source-hid">HID</span>';
       } else if (activeSource === 'gamepad' && selectedGamepadIndex !== null) {
-        const gp = navigator.getGamepads()[selectedGamepadIndex];
-        if (gp) html = `<span class="name">${gp.id.split('(')[0].trim()}</span><span class="source-badge source-gamepad">Gamepad</span>`;
+        var gp = navigator.getGamepads()[selectedGamepadIndex];
+        if (gp) html = '<span class="name">' + gp.id.split('(')[0].trim() + '</span><span class="source-badge source-gamepad">Gamepad</span>';
       } else if (activeSource === 'keyboard') {
-        html = `<span class="name">Keyboard</span><span class="source-badge source-kbd">Keyboard</span>`;
+        html = '<span class="name">Keyboard</span><span class="source-badge source-kbd">Keyboard</span>';
       } else {
         html = '<span style="color:#6b7280;">None connected</span>';
       }
@@ -949,20 +1094,20 @@ limitations under the License. -->
       if (!wdiState.deviceControlActive) return { cmd: 'CONTROL DISABLED', cls: 'bg-gray' };
       if (wdiState.eStop) return { cmd: 'EMERGENCY_STOP', cls: 'bg-red' };
       if (wdiState.mode === 'seating') {
-        if (Math.abs(wdiState.forward) > 0.1) return { cmd: `SEATING: ${wdiState.forward > 0 ? 'UP' : 'DOWN'} ${Math.abs(wdiState.forward * 100).toFixed(0)}%`, cls: 'bg-purple' };
+        if (Math.abs(wdiState.forward) > 0.1) return { cmd: 'SEATING: ' + (wdiState.forward > 0 ? 'UP' : 'DOWN') + ' ' + Math.abs(wdiState.forward * 100).toFixed(0) + '%', cls: 'bg-purple' };
         return { cmd: 'SEATING: IDLE', cls: 'bg-purple-light' };
       }
-      const f = wdiState.forward, t = wdiState.turn;
+      var f = wdiState.forward;
+      var t = wdiState.turn;
       if (Math.abs(f) < 0.1 && Math.abs(t) < 0.1) return { cmd: 'DRIVE: STOPPED', cls: 'bg-gray' };
-      let dir = '';
+      var dir = '';
       if (f > 0.1) dir = 'FORWARD'; else if (f < -0.1) dir = 'REVERSE';
       if (t > 0.1) dir += dir ? ' + RIGHT' : 'RIGHT'; else if (t < -0.1) dir += dir ? ' + LEFT' : 'LEFT';
-      return { cmd: `DRIVE: ${dir} ${(Math.max(Math.abs(f), Math.abs(t)) * 100).toFixed(0)}%`, cls: 'bg-green' };
+      return { cmd: 'DRIVE: ' + dir + ' ' + (Math.max(Math.abs(f), Math.abs(t)) * 100).toFixed(0) + '%', cls: 'bg-green' };
     }
 
     function updateWDIDisplay() {
-      // Device control indicator
-      const ctrlInd = $('controlIndicator');
+      var ctrlInd = $('controlIndicator');
       if (wdiState.deviceControlActive) {
         ctrlInd.className = 'control-indicator control-active';
         ctrlInd.textContent = 'DEVICE CONTROL: ACTIVE';
@@ -971,8 +1116,8 @@ limitations under the License. -->
         ctrlInd.textContent = 'DEVICE CONTROL: INACTIVE';
       }
 
-      const cmd = getWDICommand();
-      const cmdEl = $('commandDisplay');
+      var cmd = getWDICommand();
+      var cmdEl = $('commandDisplay');
       cmdEl.className = 'command-display ' + cmd.cls;
       cmdEl.querySelector('.cmd').textContent = cmd.cmd;
 
@@ -994,64 +1139,167 @@ limitations under the License. -->
     }
 
     function updateRawDisplay(source, axes, buttons, raw) {
-      const axisNames = source === 'gamepad' ? ['LX', 'LY', 'RX', 'RY'] : ['X', 'Y', 'Z', 'Rz'];
-      let html = '';
+      var axisNames = source === 'gamepad' ? ['LX', 'LY', 'RX', 'RY', 'A4', 'A5', 'A6', 'A7'] : ['X', 'Y', 'Z', 'Rz'];
+      var html = '';
 
       if (source === 'hid' && raw.hex) {
-        html += `<div class="raw-box"><div class="label">Report ID: ${raw.reportId}</div><div class="hex">${raw.hex}</div></div>`;
+        html += '<div class="raw-box"><div class="label">Report ID: ' + raw.reportId + '</div><div class="hex">' + raw.hex + '</div></div>';
       }
 
-      html += '<div class="raw-box"><div class="label">Axes</div>';
-      axes.forEach((val, i) => {
-        const pct = ((val + 1) / 2) * 100;
-        const name = axisNames[i] || `A${i}`;
-        html += `<div class="axis-row"><span class="name">${name}:</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span class="value">${val.toFixed(3)}</span></div>`;
-      });
+      if (source === 'gamepad' && raw.buttons) {
+        var gp = navigator.getGamepads()[selectedGamepadIndex];
+        if (gp) {
+          html += '<div class="raw-box"><div class="label">Gamepad Info</div>';
+          html += '<div style="font-size:0.7rem;color:#9ca3af;">Mapping: ' + (gp.mapping || 'non-standard') + ' | Connected: ' + gp.connected + ' | Timestamp: ' + gp.timestamp.toFixed(0) + '</div></div>';
+        }
+      }
+
+      html += '<div class="raw-box"><div class="label">Axes (' + axes.length + ')</div>';
+      for (var i = 0; i < axes.length; i++) {
+        var val = axes[i];
+        var pct = ((val + 1) / 2) * 100;
+        var name = axisNames[i] || ('A' + i);
+        html += '<div class="axis-row"><span class="name">' + name + ':</span><div class="bar"><div class="bar-fill" style="width:' + pct + '%"></div></div><span class="value">' + val.toFixed(3) + '</span></div>';
+      }
       html += '</div>';
 
-      html += '<div class="raw-box"><div class="label">Buttons</div><div class="button-grid">';
-      buttons.forEach((pressed, i) => {
-        html += `<div class="button-item${pressed ? ' pressed' : ''}">${i}</div>`;
-      });
-      html += '</div></div>';
+      html += '<div class="raw-box"><div class="label">Buttons (' + buttons.length + ')</div><div class="button-grid">';
+      for (var j = 0; j < buttons.length; j++) {
+        var pressed = buttons[j];
+        var pressedClass = pressed ? ' pressed' : '';
+        html += '<div class="button-item' + pressedClass + '" title="btn ' + j + '">' + j + '</div>';
+      }
+      html += '</div>';
 
+      if (source === 'gamepad' && raw.buttons) {
+        var activeButtons = [];
+        for (var k = 0; k < raw.buttons.length; k++) {
+          var btn = raw.buttons[k];
+          if (typeof btn === 'object') {
+            if (btn.pressed || btn.value > 0) {
+              activeButtons.push(k + ': p=' + btn.pressed + ', v=' + btn.value.toFixed(2));
+            }
+          } else if (btn) {
+            activeButtons.push(k + ': ' + btn);
+          }
+        }
+        if (activeButtons.length > 0) {
+          html += '<div style="font-size:0.7rem;color:#4ade80;margin-top:0.5rem;">Active: ' + activeButtons.join(', ') + '</div>';
+        }
+      }
+
+      html += '</div>';
       $('rawDataContainer').innerHTML = html;
     }
 
-    let lastEventTime = 0;
+    var lastEventTime = 0;
     function addEvent(source, axes, pressedBtns, raw) {
-      const now = Date.now();
+      var now = Date.now();
       if (now - lastEventTime < 50) return;
       lastEventTime = now;
 
-      const ts = new Date().toISOString().split('T')[1].slice(0, -1);
-      const axisStr = axes.slice(0, 4).map(a => a.toFixed(2)).join(', ');
+      var ts = new Date().toISOString().split('T')[1].slice(0, -1);
+      var axisStr = axes.slice(0, 4).map(function (a) { return a.toFixed(2); }).join(', ');
 
-      events.unshift({ id: eventId++, ts, source, axes: axisStr, btns: pressedBtns });
+      events.unshift({ id: eventId++, ts: ts, source: source, axes: axisStr, btns: pressedBtns });
       if (events.length > 100) events.pop();
 
-      let html = '';
-      events.slice(0, 50).forEach(e => {
-        const srcCls = e.source === 'hid' ? 'src-hid' : (e.source === 'keyboard' ? 'src-kbd' : 'src-gp');
-        const srcLabel = e.source === 'hid' ? 'HID' : (e.source === 'keyboard' ? 'KEY' : 'GP');
-        html += `<div class="event-row"><span class="ts">${e.ts}</span><span class="src ${srcCls}">${srcLabel}</span><span class="data">[${e.axes}]</span>`;
-        if (e.btns.length) html += `<span class="btns">${e.source === 'keyboard' ? e.btns.join('+') : 'BTN:[' + e.btns.join(',') + ']'}</span>`;
+      var html = '';
+      var eventsToShow = events.slice(0, 50);
+      for (var i = 0; i < eventsToShow.length; i++) {
+        var e = eventsToShow[i];
+        var srcCls = e.source === 'hid' ? 'src-hid' : (e.source === 'keyboard' ? 'src-kbd' : 'src-gp');
+        var srcLabel = e.source === 'hid' ? 'HID' : (e.source === 'keyboard' ? 'KEY' : 'GP');
+        html += '<div class="event-row"><span class="ts">' + e.ts + '</span><span class="src ' + srcCls + '">' + srcLabel + '</span><span class="data">[' + e.axes + ']</span>';
+        if (e.btns.length) html += '<span class="btns">' + (e.source === 'keyboard' ? e.btns.join('+') : 'BTN:[' + e.btns.join(',') + ']') + '</span>';
         html += '</div>';
-      });
+      }
       $('eventLog').innerHTML = html || '<div class="placeholder">No events recorded</div>';
     }
 
-    // Start gamepad polling
     pollGamepad();
+    updateSeatingDisplay();
 
-    // ============ Keyboard Functions ============
-    const keyboardCapture = $('keyboardCapture');
-    const keysPressed = new Set();
-    let keyboardActive = false;
-    let prevKeyStates = {};
+    function processSeating(buttons) {
+      // Only process if we have enough buttons for seating controls
+      if (buttons.length <= SEATING_BTN.MEMORY_1) {
+        seatingState.memory = null;
+        seatingState.tilt = 0;
+        seatingState.recline = 0;
+        seatingState.legrest = 0;
+        seatingState.elevate = 0;
+        seatingState.footplates = 0;
+        seatingState.stand = 0;
+        updateSeatingDisplay();
+        return;
+      }
 
-    // WDI Keyboard mappings per spec
-    const keyMap = {
+      var downMod = buttons[SEATING_BTN.DOWN_MOD] || false;
+
+      // Memory positions (1-6 + Home)
+      seatingState.memory = null;
+      if (buttons[SEATING_BTN.MEMORY_1]) seatingState.memory = 1;
+      else if (buttons[SEATING_BTN.MEMORY_2]) seatingState.memory = 2;
+      else if (buttons[SEATING_BTN.MEMORY_3]) seatingState.memory = 3;
+      else if (buttons[SEATING_BTN.MEMORY_4]) seatingState.memory = 4;
+      else if (buttons[SEATING_BTN.MEMORY_5]) seatingState.memory = 5;
+      else if (buttons[SEATING_BTN.MEMORY_6]) seatingState.memory = 6;
+      else if (buttons[SEATING_BTN.MEMORY_HOME]) seatingState.memory = 'Home';
+
+      // Actuators: 1 = up/forward, -1 = down/backward, 0 = idle
+      // Per WDI spec: button alone = up/forward, button + DOWN_MOD = down/backward
+      seatingState.tilt = buttons[SEATING_BTN.TILT] ? (downMod ? -1 : 1) : 0;
+      seatingState.recline = buttons[SEATING_BTN.RECLINE] ? (downMod ? -1 : 1) : 0;
+      seatingState.legrest = buttons[SEATING_BTN.LEGREST] ? (downMod ? -1 : 1) : 0;
+      seatingState.elevate = buttons[SEATING_BTN.ELEVATE] ? (downMod ? -1 : 1) : 0;
+      seatingState.footplates = buttons[SEATING_BTN.FOOTPLATES] ? (downMod ? -1 : 1) : 0;
+      seatingState.stand = buttons[SEATING_BTN.STAND] ? (downMod ? -1 : 1) : 0;
+
+      updateSeatingDisplay();
+    }
+
+    function updateSeatingDisplay() {
+      $('memoryValue').textContent = seatingState.memory !== null ? seatingState.memory : 'None';
+      $('memoryValue').style.color = seatingState.memory !== null ? '#4ade80' : '#9ca3af';
+
+      var actuators = ['tilt', 'recline', 'legrest', 'elevate', 'footplates', 'stand'];
+      var labels = {
+        tilt: ['◀ Back', '-', 'Fwd ▶'],
+        recline: ['◀ Back', '-', 'Fwd ▶'],
+        legrest: ['▼ Down', '-', '▲ Up'],
+        elevate: ['▼ Down', '-', '▲ Up'],
+        footplates: ['▼ Down', '-', '▲ Up'],
+        stand: ['▼ Down', '-', '▲ Up']
+      };
+
+      for (var i = 0; i < actuators.length; i++) {
+        var act = actuators[i];
+        var val = seatingState[act];
+        var el = $('act' + act.charAt(0).toUpperCase() + act.slice(1));
+        var dirEl = $('act' + act.charAt(0).toUpperCase() + act.slice(1) + 'Dir');
+
+        if (val === 0) {
+          el.style.background = '#374151';
+          dirEl.textContent = labels[act][1];
+          dirEl.style.color = '#6b7280';
+        } else if (val === 1) {
+          el.style.background = '#166534';
+          dirEl.textContent = labels[act][2];
+          dirEl.style.color = '#4ade80';
+        } else {
+          el.style.background = '#7c2d12';
+          dirEl.textContent = labels[act][0];
+          dirEl.style.color = '#fb923c';
+        }
+      }
+    }
+
+    // Keyboard
+    var keyboardCapture = $('keyboardCapture');
+    var keysPressed = new Set();
+    var keyboardActive = false;
+
+    var keyMap = {
       'ArrowUp': 'forward', 'KeyW': 'forward',
       'ArrowDown': 'backward', 'KeyS': 'backward',
       'ArrowLeft': 'left', 'KeyA': 'left',
@@ -1068,53 +1316,73 @@ limitations under the License. -->
       'Minus': 'speedDown', 'Equal': 'speedUp',
       'Digit1': 'speed1', 'Digit2': 'speed2', 'Digit3': 'speed3',
       'Digit4': 'speed4', 'Digit5': 'speed5',
+      'F1': 'memory1', 'F2': 'memory2', 'F3': 'memory3',
+      'F4': 'memory4', 'F5': 'memory5', 'F6': 'memory6', 'F7': 'memoryHome'
     };
 
-    // Shift + comma/period for blinkers
-    const shiftKeyMap = {
+    var shiftKeyMap = {
       'Comma': 'leftBlinker',
       'Period': 'rightBlinker',
+      'Numpad0': 'tiltUp',
+      'Numpad1': 'reclineUp',
+      'Numpad2': 'legrestUp',
+      'Numpad3': 'elevateUp',
+      'Numpad4': 'footplatesUp',
+      'NumpadDecimal': 'standUp'
     };
 
-    function processKeyboard(shiftHeld) {
-      let fwd = 0, turn = 0;
+    var ctrlKeyMap = {
+      'Numpad0': 'tiltDown',
+      'Numpad1': 'reclineDown',
+      'Numpad2': 'legrestDown',
+      'Numpad3': 'elevateDown',
+      'Numpad4': 'footplatesDown',
+      'NumpadDecimal': 'standDown'
+    };
 
-      // Drive only if device control is active
+    function processKeyboard(shiftHeld, ctrlHeld) {
+      var fwd = 0, turn = 0;
       if (wdiState.deviceControlActive) {
         if (keysPressed.has('forward')) fwd = 1;
         if (keysPressed.has('backward')) fwd = -1;
         if (keysPressed.has('left')) turn = -1;
         if (keysPressed.has('right')) turn = 1;
       }
-
       wdiState.forward = fwd;
       wdiState.turn = turn;
       wdiState.eStop = keysPressed.has('estop');
       wdiState.horn = keysPressed.has('horn');
 
+      // Seating from keyboard
+      seatingState.tilt = keysPressed.has('tiltUp') ? 1 : (keysPressed.has('tiltDown') ? -1 : 0);
+      seatingState.recline = keysPressed.has('reclineUp') ? 1 : (keysPressed.has('reclineDown') ? -1 : 0);
+      seatingState.legrest = keysPressed.has('legrestUp') ? 1 : (keysPressed.has('legrestDown') ? -1 : 0);
+      seatingState.elevate = keysPressed.has('elevateUp') ? 1 : (keysPressed.has('elevateDown') ? -1 : 0);
+      seatingState.footplates = keysPressed.has('footplatesUp') ? 1 : (keysPressed.has('footplatesDown') ? -1 : 0);
+      seatingState.stand = keysPressed.has('standUp') ? 1 : (keysPressed.has('standDown') ? -1 : 0);
+
       updateWDIDisplay();
+      updateSeatingDisplay();
       updateKeyboardRawDisplay();
     }
 
     function updateKeyboardRawDisplay() {
       if (!keyboardActive || keysPressed.size === 0) return;
-
-      const actions = Array.from(keysPressed);
-      let html = '<div class="raw-box"><div class="label">Active Keys</div>';
-      html += `<div style="color:#4ade80;font-family:monospace;">${actions.join(', ')}</div></div>`;
-
+      var actions = Array.from(keysPressed);
+      var html = '<div class="raw-box"><div class="label">Active Keys</div>';
+      html += '<div style="color:#4ade80;font-family:monospace;">' + actions.join(', ') + '</div></div>';
       html += '<div class="raw-box"><div class="label">Keyboard Axes (Digital)</div>';
-      const axes = [wdiState.turn, -wdiState.forward];
-      ['X', 'Y'].forEach((name, i) => {
-        const pct = ((axes[i] + 1) / 2) * 100;
-        html += `<div class="axis-row"><span class="name">${name}:</span><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span class="value">${axes[i].toFixed(1)}</span></div>`;
-      });
+      var kbAxes = [wdiState.turn, -wdiState.forward];
+      var names = ['X', 'Y'];
+      for (var i = 0; i < 2; i++) {
+        var pct = ((kbAxes[i] + 1) / 2) * 100;
+        html += '<div class="axis-row"><span class="name">' + names[i] + ':</span><div class="bar"><div class="bar-fill" style="width:' + pct + '%"></div></div><span class="value">' + kbAxes[i].toFixed(1) + '</span></div>';
+      }
       html += '</div>';
-
       $('rawDataContainer').innerHTML = html;
     }
 
-    keyboardCapture.addEventListener('focus', () => {
+    keyboardCapture.addEventListener('focus', function () {
       keyboardCapture.classList.add('active');
       keyboardCapture.querySelector('div').textContent = 'Keyboard active - press keys';
       keyboardActive = true;
@@ -1123,7 +1391,7 @@ limitations under the License. -->
       updateActiveSource();
     });
 
-    keyboardCapture.addEventListener('blur', () => {
+    keyboardCapture.addEventListener('blur', function () {
       keyboardCapture.classList.remove('active');
       keyboardCapture.querySelector('div').textContent = 'Click here to capture keyboard';
       keysPressed.clear();
@@ -1140,17 +1408,23 @@ limitations under the License. -->
       }
     });
 
-    keyboardCapture.addEventListener('keydown', (e) => {
+    keyboardCapture.addEventListener('keydown', function (e) {
       e.preventDefault();
+      var shiftHeld = e.shiftKey;
+      var ctrlHeld = e.ctrlKey;
+      var action;
 
-      const shiftHeld = e.shiftKey;
-      let action = shiftHeld && shiftKeyMap[e.code] ? shiftKeyMap[e.code] : keyMap[e.code];
+      if (ctrlHeld && ctrlKeyMap[e.code]) {
+        action = ctrlKeyMap[e.code];
+      } else if (shiftHeld && shiftKeyMap[e.code]) {
+        action = shiftKeyMap[e.code];
+      } else {
+        action = keyMap[e.code];
+      }
       if (!action) return;
 
-      const wasPressed = keysPressed.has(action);
-
+      var wasPressed = keysPressed.has(action);
       if (!wasPressed) {
-        // Edge-triggered actions
         if (action === 'deviceControlToggle') wdiState.deviceControlActive = !wdiState.deviceControlActive;
         if (action === 'modeSwitch') wdiState.mode = wdiState.mode === 'drive' ? 'seating' : 'drive';
         if (action === 'headlight') wdiState.headlight = !wdiState.headlight;
@@ -1162,32 +1436,36 @@ limitations under the License. -->
         if (action === 'profileDown') wdiState.profile = wdiState.profile <= 1 ? 5 : wdiState.profile - 1;
         if (action === 'speedUp' && wdiState.speed < 5) wdiState.speed++;
         if (action === 'speedDown' && wdiState.speed > 1) wdiState.speed--;
-        if (action.startsWith('speed') && !action.includes('Up') && !action.includes('Down')) {
-          const num = parseInt(action.replace('speed', ''));
+        if (action.indexOf('speed') === 0 && action !== 'speedUp' && action !== 'speedDown') {
+          var num = parseInt(action.replace('speed', ''));
           if (num >= 1 && num <= 5) wdiState.speed = num;
         }
+        // Memory positions
+        if (action === 'memory1') seatingState.memory = 1;
+        if (action === 'memory2') seatingState.memory = 2;
+        if (action === 'memory3') seatingState.memory = 3;
+        if (action === 'memory4') seatingState.memory = 4;
+        if (action === 'memory5') seatingState.memory = 5;
+        if (action === 'memory6') seatingState.memory = 6;
+        if (action === 'memoryHome') seatingState.memory = 'Home';
 
         addEvent('keyboard', [wdiState.turn, -wdiState.forward], [action], null);
       }
-
       keysPressed.add(action);
       $('activeKeys').textContent = Array.from(keysPressed).join(' + ');
-      processKeyboard(shiftHeld);
+      processKeyboard(shiftHeld, ctrlHeld);
     });
 
-    keyboardCapture.addEventListener('keyup', (e) => {
+    keyboardCapture.addEventListener('keyup', function (e) {
       e.preventDefault();
-      const shiftHeld = e.shiftKey;
-      let action = shiftKeyMap[e.code] || keyMap[e.code];
+      var action = ctrlKeyMap[e.code] || shiftKeyMap[e.code] || keyMap[e.code];
       if (!action) return;
-
       keysPressed.delete(action);
-      // Also delete the shift variant if releasing the base key
+      if (ctrlKeyMap[e.code]) keysPressed.delete(ctrlKeyMap[e.code]);
       if (shiftKeyMap[e.code]) keysPressed.delete(shiftKeyMap[e.code]);
       if (keyMap[e.code]) keysPressed.delete(keyMap[e.code]);
-
       $('activeKeys').textContent = Array.from(keysPressed).join(' + ') || '';
-      processKeyboard(shiftHeld);
+      processKeyboard(e.shiftKey, e.ctrlKey);
     });
   </script>
 </body>
