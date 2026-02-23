@@ -79,8 +79,8 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 | Reset Movement | - | - | BTN_TOUCH Released |
 | Emergency stop | see below | BTN_SOUTH | - |
 | Device control toggle | enter | BTN_START | BTN_LEFT |
-| Enable device control | None | BTN_C | - |
-| Disable device control | None | BTN_MODE | - |
+| Enable device control | SHIFT + '\' | BTN_C | - |
+| Disable device control | CTRL + '\' | BTN_MODE | - |
 
 
 #### Emergency Stop
