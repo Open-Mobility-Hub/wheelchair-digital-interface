@@ -703,6 +703,8 @@ limitations under the License. -->
           <div class="mapping-item"><span class="label">↑/W, ↓/S:</span> Forward/Back</div>
           <div class="mapping-item"><span class="label">←/A, →/D:</span> Left/Right</div>
           <div class="mapping-item"><span class="label">Enter:</span> Device Control Toggle</div>
+          <div class="mapping-item"><span class="label">SHIFT+\:</span> Device Control Enable</div>
+          <div class="mapping-item"><span class="label">CTRL+\:</span> Device Control Disable</div>
           <div class="mapping-item"><span class="label">PgUp/PgDn/B:</span> Emergency Stop</div>
           <div class="mapping-item"><span class="label">1-5:</span> Set Speed Level</div>
           <div class="mapping-item"><span class="label">-/=:</span> Speed Down/Up</div>
@@ -1292,6 +1294,7 @@ limitations under the License. -->
           dirEl.style.color = '#fb923c';
         }
       }
+
     }
 
     // Keyboard
@@ -1328,7 +1331,8 @@ limitations under the License. -->
       'Numpad2': 'legrestUp',
       'Numpad3': 'elevateUp',
       'Numpad4': 'footplatesUp',
-      'NumpadDecimal': 'standUp'
+      'NumpadDecimal': 'standUp',
+      'Backslash': 'deviceControlEnable'
     };
 
     var ctrlKeyMap = {
@@ -1337,7 +1341,8 @@ limitations under the License. -->
       'Numpad2': 'legrestDown',
       'Numpad3': 'elevateDown',
       'Numpad4': 'footplatesDown',
-      'NumpadDecimal': 'standDown'
+      'NumpadDecimal': 'standDown',
+      'Backslash': 'deviceControlDisable'
     };
 
     function processKeyboard(shiftHeld, ctrlHeld) {
@@ -1426,6 +1431,8 @@ limitations under the License. -->
       var wasPressed = keysPressed.has(action);
       if (!wasPressed) {
         if (action === 'deviceControlToggle') wdiState.deviceControlActive = !wdiState.deviceControlActive;
+        if (action === 'deviceControlEnable') wdiState.deviceControlActive = true;
+        if (action === 'deviceControlDisable') wdiState.deviceControlActive = false;
         if (action === 'modeSwitch') wdiState.mode = wdiState.mode === 'drive' ? 'seating' : 'drive';
         if (action === 'headlight') wdiState.headlight = !wdiState.headlight;
         if (action === 'hazards') wdiState.hazards = !wdiState.hazards;
