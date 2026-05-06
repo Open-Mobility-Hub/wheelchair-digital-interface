@@ -100,13 +100,16 @@ The WDI builds upon existing specifications for using [Human Interface Devices (
 ### Compatibility Tester
 [A web-based testing tool for verifying input device compatibility with the WDI standard](/tester-util/index.html) 
 
-It displays raw HID events from gamepads, joysticks, and keyboards alongside the translated wheelchair commands they would produce. It has been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly.
+It displays raw HID events from gamepads, joysticks, and keyboards alongside the translated wheelchair commands they would produce. It has been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly. This tester does not currently support devices directly implementing the Wheelchair HID spec.
 
 ### USB
 [USB mapping and implementation guidance](/docs/usb/wdi-usb-interface.md)
 
 ### Bluetooth
 [BLE mapping and implementation guidance](/docs/ble/wdi-ble-interface.md)
+
+### Wheelchair
+The Wheelchair HID is a specification for bidirectional communication between a wheelchair host and a Bluetooth LE or USB connected app or device. It defines a set of HID descriptors that allow apps and devices to send control input, request feedback, and exchange keepalive messages with a wheelchair host, and allow the host to report wheelchair state back to connected apps and devices. It is designed specifically with power wheelchairs in mind. This provides devices with more explicit, direct control over the wheelchair with more feedback information. There are no current host implementations of this spec. [See details on the USB and BLE](/docs/wheechair/wheelchair-hid.md)
 
 ### Other Physical Interfaces
 Expansion of the WDI definition to cover other physical interfaces is anticipated. HID is also supported on the following interfaces:
