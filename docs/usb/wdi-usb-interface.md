@@ -92,8 +92,12 @@ E-stopping has many keyboard mappings in order to support use of slide advancers
 * Escape
 * ALT + Tab
 
+#### Feedback
+If a device sends a drive command without being in active control, the host shall attempt to send a vibration (force feedback) and LED event to the device based on the device's reported capabilities. This will alert the device and user that the device is not in active control.
+
 #### Keepalive signal
-For an additional layer of safety, devices can optionally trigger the host to start a keepalive watchdog that ensures the device is still functioning correctly. It is optional on the device side to maintain compatibility with off-the-shelf devices, but all hosts must implement this. The events reserved for this signalling are `BTN_Z` and `KP_MINUS`.
+For an additional layer of safety, devices can optionally trigger the host to start a keepalive watchdog that ensures the device is still functioning correctly. It is optional on the device side to maintain compatibility with off-the-shelf devices, but all hosts must implement this. The events reserved for this signalling are `BTN_Z` and `KP_MINUS`. The feedback described above can be used to tell if this deactivates the device.
+
 If a device is in active control, the recommended host implementation of this monitoring works as shown below:
 
 ```
