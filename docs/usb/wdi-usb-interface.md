@@ -37,7 +37,6 @@ When the HID is defined as a gamepad, the button usages get mapped to particular
  BTN_C
  BTN_NORTH / BTN_X
  BTN_WEST / BTN_Y
- BTN_Z
  BTN_TL
  BTN_TR
  BTN_TL2
@@ -57,7 +56,6 @@ Since what needs to be controlled varies depending on the WDI [implementation](.
 **Gamepad:**
 * BTN_EAST
 * BTN_NORTH
-* BTN_Z
 * BTN_TR2
 * BTN_TL2
 * ABS_Z
@@ -93,6 +91,42 @@ E-stopping has many keyboard mappings in order to support use of slide advancers
 * SHIFT + F5
 * Escape
 * ALT + Tab
+
+#### Keepalive signal
+For an additional layer of safety, devices can optionally trigger the host to start a keepalive watchdog that ensures the device is still functioning correctly. It is optional on the device side to maintain compatibility with off-the-shelf devices, but all hosts must implement this. The events reserved for this signalling are `BTN_Z` and `KP_MINUS`.
+If a device is in active control, the recommended host implementation of this monitoring works as shown below:
+
+```
+                   ┌────────────────────────────────┐
+                   │ Wait until keepalive key press │
+         ┌────────→│ (Keyboard - keypad minus key,  │←──────────────────────┐
+         │         │ Gamepad - BTN_Z)               │                       │
+         │         └───────────────┬────────────────┘                       │
+         │                         │                                        │
+         │                         │                                        │
+         │                         │                                        │
+         │                         ↓                       ┌─────────────┐  │
+         │         [▾ Any device event within 250ms?]─Yes─→│Reset counter│──│
+         │                         │                       └─────────────┘  │
+         │                         No                                       │
+         │                         ↓                                        │
+         │           ┌───────────────────────────┐                          │
+         │           │Stop movement, stop seating│                          │
+         │           └─────────────┬─────────────┘                          │
+         │                         │                                        │
+         │                         │                                        │
+         │                         │                                        │
+         │                         ↓                                        │
+         │        [▾ Missed for 3 consecutive cycles?]──────────No──────────┘
+         │                         │
+         │                        Yes
+         │                         │
+         │                         ↓
+         │                ┌──────────────────┐
+         └────────────────┤Deactivate control│
+                          └──────────────────┘
+```
+
 
 
 ### Chair Control Actions
