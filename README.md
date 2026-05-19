@@ -26,7 +26,7 @@ Use USB or BLE HID when you want a commercial gamepad, adaptive switch, or keybo
 * Skim [What is Controlled on a Wheelchair](#what-is-controlled-on-a-wheelchair) to see the WDI command surface.
 * Pick your spec from the table above.
 * Check the [list of known host-side implementations](/docs/implementations/implementations.md) to see which chairs you can target today.
-* Read [CONTRIBUTING.md](/docs/CONTRIBUTING.md) and the [Code of Conduct](/docs/code-of-conduct.md) if you want to contribute.
+* Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) if you want to contribute.
 
 ## Background
 The WDI was initially conceived and developed as part of the National Science Foundation (NSF) Convergence Accelerator Track H project "Mobility Independence through Accelerated Wheelchair Intelligence" (NSF SP0076554) with input from a wide range of stakeholders. 
