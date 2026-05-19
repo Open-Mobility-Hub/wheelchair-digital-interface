@@ -1,14 +1,32 @@
 # Wheelchair Digital Interface
-The Wheelchair Digital Interface (WDI) API detailed in this project is a modern, two-way communication standard for power wheelchairs built on widely accepted HID protocols.
-For easy switching:
-* [Source Code](https://github.com/Open-Mobility-Hub/wheelchair-digital-interface)
-* [Doc Site](https://open-mobility-hub.github.io/wheelchair-digital-interface/)
+The Wheelchair Digital Interface (WDI) is an open, modern communication standard for power wheelchairs built on widely accepted HID protocols. It gives wheelchair users more choice in how they drive and interact with their chair, and gives makers, researchers, and clinicians a shared, open foundation to build on.
+
+You can view the documents as [Source Code](https://github.com/Open-Mobility-Hub/wheelchair-digital-interface) or browse as a [Doc Site](https://open-mobility-hub.github.io/wheelchair-digital-interface/).
 
 ## Purpose
 The purpose of the open WDI standard is: 
 1. to allow faster development of new accessible wheelchair alternative controls by removing the need for 9-pin printer cable adapter circuits currently required to adapt to today's proprietary TRACE/DB-9 wheelchair alternative drive inputs, 
 2. to make current, commercially available adaptive gaming and computer interfaces available to power wheelchair users for wheelchair control, and, 
-3. to allow two-direction communication between the power wheelchair and the controller to provide user feedback. 
+3. to allow two-direction communication between the power wheelchair and the controller to provide enhanced user feedback. 
+
+## Quick Start — Choose Your Interface
+
+WDI currently offers multiple complementary interface paths. Pick the path that matches what you're building.
+
+| Interface | Best for | Typical builder | Spec |
+|-----------|----------| ----------------|------|
+| **USB HID** | Adapting off-the-shelf gamepads, keyboards, and existing accessible input devices to drive a wheelchair | Accessible-tech makers, gaming-controller adapters, clinicians evaluating drive options | [USB mapping](/docs/usb/wdi-usb-interface.md) |
+| **BLE HID** | Same use cases as USB, but wireless | Wireless input device makers | [BLE mapping](/docs/ble/wdi-ble-interface.md) |
+| **Wheelchair HID** | Purpose-built apps and devices that want **two-way** communication — sending control input *and* receiving wheelchair state | App developers building wheelchair-aware experiences, researchers needing telemetry, advanced control devices | [Wheelchair HID spec](/docs/wheelchair/wheelchair-hid.md) |
+
+Use USB or BLE HID when you want a commercial gamepad, adaptive switch, or keyboard to control a chair. Use Wheelchair HID when you're building an app or device that needs the wheelchair to talk back — for richer user feedback, smarter UIs, or research data.
+
+### Get Started in 5 Minutes
+* Try the [Compatibility Tester](/tester-util/standard-hid-tester.html) with a USB or BLE gamepad you already own — see live HID events translated into wheelchair commands.
+* Skim [What is Controlled on a Wheelchair](#what-is-controlled-on-a-wheelchair) to see the WDI command surface.
+* Pick your spec from the table above.
+* Check the [list of known host-side implementations](/docs/implementations/implementations.md) to see which chairs you can target today.
+* Read [CONTRIBUTING.md](/docs/CONTRIBUTING.md) and the [Code of Conduct](/docs/code-of-conduct.md) if you want to contribute.
 
 ## Background
 The WDI was initially conceived and developed as part of the National Science Foundation (NSF) Convergence Accelerator Track H project "Mobility Independence through Accelerated Wheelchair Intelligence" (NSF SP0076554) with input from a wide range of stakeholders. 
@@ -21,19 +39,18 @@ Prior to the WDI, the state-of-the-art in power wheelchair controls was to commu
 The stakeholders originally involved in WDI development are represented below. They do not cover every use case, but they cover the primary use cases that the WDI seeks to address.
 
 ### 1. Wheelchair Users with Progressive or Changing Conditions
-* User's physical capabilities change rapidly, and therefore, so does the functional drive method
-* Cannot get new drive methods quickly enough to keep up with changing conditions, so often times users skip to the end use case (eye drive). This leads to situations where the drive method is not chosen based on the user's current ability. The reimbursement model is challenging and time-consuming in such a way that by the time a funded solution arrives and is setup, the user's condition may have progressed and that is no longer an applicable solution
+* The drive method that works best may change over time as physical capabilities change
+* Today's funding model can take long enough that the prescribed solution no longer matches the user's current needs by the time it arrives. As a result, users sometimes settle for a future-proof drive method (such as eye drive) before they actually need it, rather than the one best suited to them right now. WDI shortens that loop by letting users and clinicians try input options quickly
 * Wants to add additional inputs and options to their primary control method
 
 ### 2. Tech Savvy Wheelchair User
 * Uses computer, smartphone, plays video games, tinkers with technology
-* Very comfortable with current drive method
 * Wants to tinker with using other things to drive their wheelchair, like phone or game controller, so they can get the best setup for themselves
 * Would like to use wheelchair control device to control other technology (or vice versa)
 * Wants ability to play with configuration/button mapping to best fit their needs
 
 ### 3. Wheelchair Clinician/ATP
-* Wants to be able to quickly and easily test multiple drive options quickly to find what best fits users needs
+* Wants to be able to quickly and easily test multiple drive options to find what best fits user needs
 * Wants to spend less time writing/justifying devices to insurance/funding sources
 
 ### 4. Accessible Technology Maker
@@ -50,7 +67,7 @@ The stakeholders originally involved in WDI development are represented below. T
 * WDI shall interface with off-the-shelf computer control devices such as gaming controllers, keyboards, and other computer peripherals.
 * WDI shall allow for bi-directional communication with the input device for providing feedback such as haptics, lights, or sounds.
 * WDI shall allow for devices to self-report their capabilities and bounds (e.g. joystick ranges).
-* WDI shall allow for multiple complimentary devices to be used simultaneously.
+* WDI shall allow for multiple complementary devices to be used simultaneously.
 * WDI shall require a specific input before allowing a device to drive the wheelchair.
 * WDI shall stop the wheelchair and return control to the default wheelchair control device upon losing connection to an input.
 
@@ -98,18 +115,29 @@ In addition to the specific actuators, chairs may be programmed with a number of
 The WDI builds upon existing specifications for using [Human Interface Devices (HID)](https://en.wikipedia.org/wiki/Human_interface_device).
 
 ### Compatibility Tester
-[A web-based testing tool for verifying input device compatibility with the WDI standard](/tester-util/index.html) 
+There are two separate compatibility testers depending on whether you are using standard keyboard/gamepad HID or Wheelchair HID. 
 
-It displays raw HID events from gamepads, joysticks, and keyboards alongside the translated wheelchair commands they would produce. It has been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly. This tester does not currently support devices directly implementing the Wheelchair HID spec.
+[A web-based testing tool for verifying device compatibility with the WDI gamepad/keyboard mappings](/tester-util/standard-hid-tester.html) 
+
+[A web-based testing tool for verifying compatibility with the WDI wheelchair HID](/tester-util/wheelchair-hid-tester.html) 
+
+Both testers display raw HID events from alongside the translated wheelchair commands they would produce. They have been tested with devices connected via USB and BLE. This site uses additional libraries on top of HID so off-the-shelf gamepads and keyboards work correctly.
 
 ### USB
-[USB mapping and implementation guidance](/docs/usb/wdi-usb-interface.md)
+For making commercial gaming controllers, keyboards, and other accessible input devices control a wheelchair over USB. [USB mapping and implementation guidance](/docs/usb/wdi-usb-interface.md)
 
 ### Bluetooth
-[BLE mapping and implementation guidance](/docs/ble/wdi-ble-interface.md)
+The same use cases as USB, wirelessly over Bluetooth Low Energy. [BLE mapping and implementation guidance](/docs/ble/wdi-ble-interface.md)
 
-### Wheelchair
-The Wheelchair HID is a specification for bidirectional communication between a wheelchair host and a Bluetooth LE or USB connected app or device. It defines a set of HID descriptors that allow apps and devices to send control input, request feedback, and exchange keepalive messages with a wheelchair host, and allow the host to report wheelchair state back to connected apps and devices. It is designed specifically with power wheelchairs in mind. This provides devices with more explicit, direct control over the wheelchair with more feedback information. There are no current host implementations of this spec. [See details on the USB and BLE](/docs/wheechair/wheelchair-hid.md)
+### Wheelchair HID (Bidirectional)
+The Wheelchair HID is a specification for **bidirectional** communication between a wheelchair host and a Bluetooth LE or USB connected app or device. It defines HID descriptors for apps and devices to send control input, request feedback, and exchange keepalive messages with a wheelchair host, and for the host to report wheelchair state — including speed setting, profile, mode (drive/seating), velocity in mph, blinker/headlight/hazard state, and movement-restriction state — back to connected apps and devices.
+
+It is purpose-built for power wheelchairs and extends WDI beyond what USB/BLE HID alone offer:
+* **Two-way data** — apps can show the user what the chair is doing, and adapt their UI to chair state.
+* **Host identification** — a cryptographically unique host UUID is exchanged via keepalive responses so an app can recognize a specific chair across reconnections.
+* **Mandatory keepalive** — defined timing ensures the chair safely stops driving if an app or device goes silent.
+
+There are no current host implementations of this spec. [Read the full Wheelchair HID spec](/docs/wheelchair/wheelchair-hid.md)
 
 ### Other Physical Interfaces
 Expansion of the WDI definition to cover other physical interfaces is anticipated. HID is also supported on the following interfaces:
@@ -132,9 +160,7 @@ Implementations may have their own additions and limitations, which are captured
 The WDI is open for use under an Apache 2.0 License.
 
 ## Versioning
-**THE WDI IS CURRENTLY PRE-RELEASE.**
-
-<i>Versioning is handled on a major.minor.patch method, until the official WDI is released all developers will be using a version < 1.0.0. All official releases will be tagged.</i>
+Versioning is handled on a major.minor.patch method. All official releases will be tagged.
 
 ## List of Current Support
 The companies and organizations listed support the open, inclusive future provided by the WDI.
