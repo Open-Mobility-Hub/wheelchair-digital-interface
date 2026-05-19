@@ -1,0 +1,1730 @@
+<!-- Copyright 2026 LUCI Mobility, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License. -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WDI Wheelchair HID 3.0 Tester (USB + BLE)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #111827; color: #fff; min-height: 100vh; padding: 1rem; }
+    .container { max-width: 1400px; margin: 0 auto; }
+    header h1 { font-size: 1.5rem; font-weight: bold; color: #60a5fa; }
+    header p { font-size: 0.875rem; color: #9ca3af; }
+    .version-badge { display: inline-block; background: #7c3aed; color: white; font-size: 0.7rem; padding: 0.125rem 0.5rem; border-radius: 0.25rem; margin-left: 0.5rem; }
+    .grid { display: grid; gap: 1rem; margin-top: 1.5rem; }
+    @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+    .panel { background: #1f2937; border-radius: 0.5rem; padding: 1rem; }
+    .panel-title { font-size: 1.125rem; font-weight: 600; color: #93c5fd; margin-bottom: 0.75rem; }
+    .btn { width: 100%; padding: 0.75rem 1rem; border-radius: 0.5rem; font-weight: 500; cursor: pointer; border: none; color: white; transition: background 0.2s; margin-bottom: 0.5rem; }
+    .btn-blue { background: #2563eb; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-red { background: #dc2626; }
+    .btn-red:hover { background: #b91c1c; }
+    .btn-purple { background: #7c3aed; }
+    .btn-purple:hover { background: #6d28d9; }
+    .btn-green { background: #059669; }
+    .btn-green:hover { background: #047857; }
+    .btn-cyan { background: #0891b2; }
+    .btn-cyan:hover { background: #0e7490; }
+    .error-box { margin-top: 0.75rem; background: rgba(127, 29, 29, 0.5); border: 1px solid #ef4444; border-radius: 0.5rem; padding: 0.75rem; font-size: 0.875rem; color: #fecaca; }
+    .info-box { background: #374151; border-radius: 0.5rem; padding: 0.75rem; margin-top: 0.5rem; }
+    .info-box .name { font-weight: 500; color: #4ade80; }
+    .info-box .vid { color: #9ca3af; font-size: 0.875rem; }
+    .info-box.active { border: 2px solid #4ade80; }
+    .source-badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+    .source-hid { background: #7c3aed; }
+    .source-ble { background: #0891b2; }
+    .command-display { border-radius: 0.5rem; padding: 1rem; text-align: center; margin-bottom: 1rem; }
+    .command-display .cmd { font-size: 1.25rem; font-weight: bold; }
+    .joystick-container { display: flex; justify-content: center; margin-bottom: 1rem; }
+    .joystick { position: relative; width: 128px; height: 128px; background: #374151; border-radius: 50%; border: 2px solid #4b5563; }
+    .joystick .crosshair-v { position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #4b5563; }
+    .joystick .crosshair-h { position: absolute; top: 50%; left: 0; height: 1px; width: 100%; background: #4b5563; }
+    .joystick .knob { position: absolute; width: 24px; height: 24px; background: #3b82f6; border-radius: 50%; border: 2px solid #93c5fd; transform: translate(-50%, -50%); transition: all 0.05s; }
+    .status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.875rem; }
+    .status-item { background: #374151; border-radius: 0.5rem; padding: 0.5rem; }
+    .status-item .label { color: #9ca3af; }
+    .status-item.active { background: #dc2626; }
+    .status-item.active-green { background: #16a34a; }
+    .status-item.inactive { background: #374151; }
+    .indicators { display: flex; justify-content: center; gap: 0.75rem; margin-top: 1rem; }
+    .indicator { width: 32px; height: 32px; border-radius: 0.25rem; display: flex; align-items: center; justify-content: center; background: #374151; }
+    .indicator.on-orange { background: #f97316; }
+    .indicator.on-yellow { background: #facc15; color: #000; }
+    .indicator.on-red { background: #ef4444; }
+    .indicator.on-blue { background: #3b82f6; }
+    .raw-box { background: #374151; border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; }
+    .raw-box .label { color: #9ca3af; font-size: 0.75rem; margin-bottom: 0.25rem; }
+    .raw-box .hex { font-family: monospace; color: #4ade80; word-break: break-all; }
+    .axis-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .axis-row .name { width: 5rem; color: #9ca3af; font-size: 0.75rem; }
+    .axis-row .bar { flex: 1; background: #4b5563; border-radius: 0.25rem; height: 1rem; overflow: hidden; }
+    .axis-row .bar-fill { height: 100%; background: #3b82f6; transition: width 0.05s; }
+    .axis-row .value { width: 6rem; text-align: right; font-family: monospace; font-size: 0.75rem; }
+    .button-grid { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .button-item { min-width: 50px; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; font-weight: 500; background: #4b5563; }
+    .button-item.pressed { background: #22c55e; }
+    .event-log { height: 192px; overflow-y: auto; font-family: monospace; font-size: 0.75rem; }
+    .event-row { display: flex; gap: 0.5rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; color: #d1d5db; }
+    .event-row:hover { background: #374151; }
+    .event-row .ts { color: #6b7280; }
+    .event-row .src { padding: 0 0.25rem; border-radius: 0.125rem; font-size: 0.625rem; }
+    .event-row .src-hid { background: #7c3aed; }
+    .event-row .src-ble { background: #0891b2; }
+    .event-row .src-gp { background: #0891b2; }
+    .event-row .src-kbd { background: #ca8a04; }
+    .event-row .src-fb { background: #059669; }
+    .event-row .src-reqfb { background: #d97706; }
+    .event-row .src-ka { background: #0891b2; }
+    .event-row .src-kar { background: #0e7490; }
+    .event-row .data { color: #4ade80; flex: 1; }
+    .event-row .btns { color: #facc15; }
+    .section-label { font-size: 0.75rem; color: #9ca3af; margin: 0.75rem 0 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .bg-gray { background: #6b7280; }
+    .bg-green { background: #16a34a; }
+    .bg-purple { background: #9333ea; }
+    .bg-purple-light { background: #a855f7; }
+    .bg-red { background: #dc2626; }
+    .divider { border-top: 1px solid #374151; margin: 1rem 0; }
+    .control-indicator { padding: 0.75rem; border-radius: 0.5rem; text-align: center; margin-bottom: 1rem; font-weight: 600; }
+    .control-active { background: #16a34a; }
+    .control-inactive { background: #991b1b; }
+    .tab-btn { padding: 0.5rem 1rem; border: none; cursor: pointer; font-size: 0.875rem; background: #374151; color: #9ca3af; }
+    .tab-btn.active { background: #4b5563; color: #fff; }
+    .tab-btn:first-child { border-radius: 0.375rem 0 0 0.375rem; }
+    .tab-btn:last-child { border-radius: 0 0.375rem 0.375rem 0; }
+    .feedback-panel { background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 0.5rem; padding: 0.75rem; margin-top: 0.75rem; }
+    .feedback-title { color: #60a5fa; font-weight: 600; font-size: 0.875rem; margin-bottom: 0.5rem; }
+    .feedback-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.375rem; font-size: 0.75rem; }
+    .feedback-item { background: #374151; padding: 0.375rem; border-radius: 0.25rem; }
+    .feedback-item.active { background: #166534; }
+    .luci-status { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .luci-item { flex: 1; background: #374151; padding: 0.375rem; border-radius: 0.25rem; text-align: center; font-size: 0.75rem; }
+    .luci-item.active { background: #7c3aed; }
+    .mapping-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.8rem; }
+    @media (min-width: 768px) { .mapping-grid { grid-template-columns: repeat(3, 1fr); } }
+    .mapping-item { background: #374151; border-radius: 0.5rem; padding: 0.5rem; }
+    .mapping-item .label { color: #9ca3af; }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>WDI Wheelchair HID Tester<span class="version-badge">HID 3.0</span><span class="version-badge" style="background:#0891b2">USB + BLE</span></h1>
+      <p>Wheelchair Digital Interface - USB HID & Bluetooth LE Central Testing Tool</p>
+    </header>
+
+    <div class="grid grid-3">
+      <div class="panel">
+        <div class="panel-title">Device Connection</div>
+
+        <div class="section-label">WebHID (USB)</div>
+        <button id="hidBtn" class="btn btn-blue">Connect HID Device</button>
+        <div id="hidInfo" style="display:none"></div>
+        <div id="hidError" class="error-box" style="display:none"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Web Bluetooth (BLE Central)</div>
+        <button id="bleBtn" class="btn btn-cyan">Connect BLE Peripheral</button>
+        <div id="bleInfo" style="display:none"></div>
+        <div id="bleError" class="error-box" style="display:none"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Feedback Report (Output)</div>
+        <button id="sendFeedbackBtn" class="btn btn-green">Send Random Feedback</button>
+        <div id="feedbackStatus" style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Request Feedback (0x03) Received</div>
+        <div id="reqFbStatus" style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">No request feedback received</div>
+
+        <div class="divider"></div>
+
+        <div class="section-label">Keepalive (0x04) Received / Response (0x05)</div>
+        <div id="keepaliveStatus" style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">No keepalive received</div>
+        <div id="hostUuidDisplay" style="font-size:0.65rem;color:#6b7280;margin-top:0.25rem;font-family:monospace;word-break:break-all;">Host UUID: 7a e3 4b 91 c2 0f 48 d6 a1 5e 3d 82 f7 60 19 b4</div>
+
+        <div class="divider"></div>
+        <label style="font-size:0.75rem;color:#9ca3af;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+          <input type="checkbox" id="debugMode"> Enable debug logging (check console)
+        </label>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">WDI Wheelchair Output</div>
+
+        <div id="controlIndicator" class="control-indicator control-inactive">
+          DRIVE: DISABLED
+        </div>
+
+        <div id="commandDisplay" class="command-display bg-gray">
+          <div class="cmd">DRIVE: STOPPED</div>
+        </div>
+        <div class="joystick-container">
+          <div class="joystick">
+            <div class="crosshair-v"></div>
+            <div class="crosshair-h"></div>
+            <div class="knob" id="joystickKnob" style="left:50%;top:50%"></div>
+          </div>
+        </div>
+        <div class="status-grid">
+          <div class="status-item"><span class="label">Mode:</span> <span id="modeValue" style="color:#4ade80;font-weight:500;margin-left:0.5rem">DRIVE</span></div>
+          <div class="status-item"><span class="label">Speed:</span> <span id="speedValue" style="color:#facc15;font-weight:500;margin-left:0.5rem">3/10</span></div>
+          <div class="status-item"><span class="label">Profile:</span> <span id="profileValue" style="color:#22d3ee;font-weight:500;margin-left:0.5rem">1</span></div>
+          <div class="status-item" id="estopItem"><span class="label">E-Stop:</span> <span id="estopValue" style="font-weight:500;margin-left:0.5rem">Off</span></div>
+        </div>
+        <div class="indicators">
+          <div class="indicator" id="indLeft">◀</div>
+          <div class="indicator" id="indLight">💡</div>
+          <div class="indicator" id="indHazard">⚠</div>
+          <div class="indicator" id="indHorn">🔊</div>
+          <div class="indicator" id="indRight">▶</div>
+        </div>
+
+        <div class="luci-status">
+          <div class="luci-item" id="luciOverride">LUCI Override: OFF</div>
+          <div class="luci-item" id="luciReact">LUCI React: OFF</div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-label">Seating Controls</div>
+        <div id="seatingMemory" style="font-size:0.75rem;color:#6b7280;margin-bottom:0.5rem;">Memory Position: <span id="memoryValue" style="color:#9ca3af;">None</span></div>
+        <div id="seatingActuators" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.25rem;font-size:0.7rem;">
+          <div class="status-item" id="actTilt" style="padding:0.375rem;text-align:center;"><span class="label">Tilt</span><div id="actTiltDir" style="color:#6b7280;">-</div></div>
+          <div class="status-item" id="actRecline" style="padding:0.375rem;text-align:center;"><span class="label">Recline</span><div id="actReclineDir" style="color:#6b7280;">-</div></div>
+          <div class="status-item" id="actLegrest" style="padding:0.375rem;text-align:center;"><span class="label">Legrest</span><div id="actLegrestDir" style="color:#6b7280;">-</div></div>
+          <div class="status-item" id="actElevate" style="padding:0.375rem;text-align:center;"><span class="label">Elevate</span><div id="actElevateDir" style="color:#6b7280;">-</div></div>
+          <div class="status-item" id="actFootplates" style="padding:0.375rem;text-align:center;"><span class="label">Footplates</span><div id="actFootplatesDir" style="color:#6b7280;">-</div></div>
+          <div class="status-item" id="actStand" style="padding:0.375rem;text-align:center;"><span class="label">Stand</span><div id="actStandDir" style="color:#6b7280;">-</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Raw Input Data (Control Report 0x01)</div>
+        <div id="rawDataContainer">
+          <div class="placeholder" style="color:#6b7280;text-align:center;padding:2rem;">Connect a device to see input data</div>
+        </div>
+
+        <div class="feedback-panel">
+          <div class="feedback-title">Last Sent Feedback Report (0x02 — 19 bytes)</div>
+          <div id="feedbackData">
+            <div style="color:#6b7280;font-size:0.75rem;">No feedback sent yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Wheelchair HID 3.0 Mapping Reference</span>
+        <div>
+          <button class="tab-btn active" id="tabControl">Control (0x01)</button>
+          <button class="tab-btn" id="tabFeedback">Feedback (0x02)</button>
+          <button class="tab-btn" id="tabReqFb">Req FB (0x03)</button>
+          <button class="tab-btn" id="tabKeepalive">Keepalive (0x04)</button>
+          <button class="tab-btn" id="tabKeepaliveResp">KA Resp (0x05)</button>
+        </div>
+      </div>
+      <div id="mappingControl">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Control Report (18 bytes): X(SInt8) + Y(SInt8) + Standard1(UInt32) + Standard2(UInt32) + Vendor1(UInt32) + Vendor2(UInt32)</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Bit 0:</span> Modifier</div>
+          <div class="mapping-item"><span class="label">Bit 1:</span> Stop</div>
+          <div class="mapping-item"><span class="label">Bit 2:</span> Drive Enable</div>
+          <div class="mapping-item"><span class="label">Bit 3:</span> Cycle Profile</div>
+          <div class="mapping-item"><span class="label">Bit 4:</span> Hazards</div>
+          <div class="mapping-item"><span class="label">Bit 5:</span> Cycle Mode</div>
+          <div class="mapping-item"><span class="label">Bit 6:</span> Speed Down</div>
+          <div class="mapping-item"><span class="label">Bit 7:</span> Speed Up</div>
+          <div class="mapping-item"><span class="label">Bit 8:</span> Left Blinker</div>
+          <div class="mapping-item"><span class="label">Bit 9:</span> Right Blinker</div>
+          <div class="mapping-item"><span class="label">Bit 10:</span> Menu</div>
+          <div class="mapping-item"><span class="label">Bit 11:</span> Profile Up</div>
+          <div class="mapping-item"><span class="label">Bit 12:</span> Drive Disable</div>
+          <div class="mapping-item"><span class="label">Bit 13:</span> Headlights</div>
+          <div class="mapping-item"><span class="label">Bit 14:</span> Horn</div>
+          <div class="mapping-item"><span class="label">Bit 15:</span> Profile Down</div>
+          <div class="mapping-item"><span class="label">Bit 16-22:</span> Memory 1-6, Home</div>
+          <div class="mapping-item"><span class="label">Bit 23:</span> Reserved</div>
+          <div class="mapping-item"><span class="label">Bit 24-31:</span> Seating (Mod=reverse)</div>
+        </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;"><strong>Vendor1:</strong> Bit 0 = Modifier, Bit 1 = LUCI Override, Bit 2 = LUCI React, Bits 3-31 = TBD</p>
+      </div>
+      <div id="mappingFeedback" style="display:none;">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Feedback Report (19 bytes) v3.0: Standard(UInt32) + Vendor1(UInt32) + Vendor2(UInt32) + Speed/Profile(UInt8) + Velocity(UInt8) + Odometer(UInt8) + Reserved×4(UInt8)</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Std Bit 0:</span> Drive Disabled</div>
+          <div class="mapping-item"><span class="label">Std Bit 1:</span> Drive Enabled</div>
+          <div class="mapping-item"><span class="label">Std Bit 2:</span> Mode is Drive</div>
+          <div class="mapping-item"><span class="label">Std Bit 3:</span> Mode is Seating</div>
+          <div class="mapping-item"><span class="label">Std Bit 4:</span> L Blinker OFF</div>
+          <div class="mapping-item"><span class="label">Std Bit 5:</span> L Blinker ON</div>
+          <div class="mapping-item"><span class="label">Std Bit 6:</span> R Blinker OFF</div>
+          <div class="mapping-item"><span class="label">Std Bit 7:</span> R Blinker ON</div>
+          <div class="mapping-item"><span class="label">Std Bit 8:</span> Headlights OFF</div>
+          <div class="mapping-item"><span class="label">Std Bit 9:</span> Headlights ON</div>
+          <div class="mapping-item"><span class="label">Std Bit 10:</span> Hazards OFF</div>
+          <div class="mapping-item"><span class="label">Std Bit 11:</span> Hazards ON</div>
+          <div class="mapping-item"><span class="label">Std Bit 12:</span> No Movement Restriction</div>
+          <div class="mapping-item"><span class="label">Std Bit 13:</span> Limited Speed</div>
+          <div class="mapping-item"><span class="label">Std Bit 14:</span> No Movement</div>
+          <div class="mapping-item"><span class="label">Std Bit 15-31:</span> Reserved</div>
+          <div class="mapping-item"><span class="label">Speed/Profile:</span> Hi=Speed(0-15), Lo=Profile(0-15)</div>
+          <div class="mapping-item"><span class="label">Velocity:</span> Hi=Whole mph, Lo=Tenths</div>
+          <div class="mapping-item"><span class="label">Odometer:</span> UInt8</div>
+        </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;"><strong>Vendor1:</strong> Bit 0 = LUCI Override OFF, Bit 1 = LUCI Override ON, Bit 2 = LUCI React OFF, Bit 3 = LUCI React ON, Bits 4-31 = Reserved</p>
+      </div>
+      <div id="mappingReqFb" style="display:none;">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Request Feedback Report (1 byte): UInt8 = 0x01</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Byte 0:</span> Request (always 0x01)</div>
+        </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;">Sent from App/Device to request a full Wheelchair Feedback HID report. Not edge-triggered or hold/release — value is always 1. The Central should respond with a Feedback report (0x02).</p>
+      </div>
+      <div id="mappingKeepalive" style="display:none;">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Keepalive Report (1 byte): UInt8 = 0x01. Mandatory, sent every ~233ms.</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Byte 0:</span> Keepalive (always 0x01)</div>
+        </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;">Sent from App/Device every ~233ms. Sending a control or request feedback report resets the keepalive timer. Central checks that a keepalive, control, or request feedback report is received at least every 257ms. If 3 consecutive report timeouts occur, Central treats as Release Report and Disable Drive. Central sends a Keepalive Response (16-byte host UUID) after each Keepalive received.</p>
+      </div>
+      <div id="mappingKeepaliveResp" style="display:none;">
+        <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Keepalive Response Report (16 bytes): Host UUID sent from Central to App/Device.</p>
+        <div class="mapping-grid">
+          <div class="mapping-item"><span class="label">Bytes 0-15:</span> Host UUID (128-bit, RFC 4122)</div>
+        </div>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;">Sent from Central (host) to the App/Device upon receiving each Keepalive report. Contains a cryptographically unique 16-byte host UUID that identifies the Wheelchair host WDI implementation. The App/Device uses this to verify it is connected to the expected host.</p>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="panel-title">Event Log</div>
+      <div class="event-log" id="eventLog">
+        <div class="placeholder" style="color:#6b7280;text-align:center;padding:2rem;">No events recorded</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // Wheelchair HID 3.0 Constants
+    // =========================================================================
+    
+    // BLE UUIDs (from spec Appendix B)
+    // Base UUID: 10A5xxxx-C4EA-4B47-AE30-A7D9577FC3F9
+    const WHEELCHAIR_SERVICE_UUID = '10a50001-c4ea-4b47-ae30-a7d9577fc3f9';
+    const INPUT_REPORT_CONTROL_UUID = '10a50006-c4ea-4b47-ae30-a7d9577fc3f9';
+    const OUTPUT_REPORT_FEEDBACK_UUID = '10a50007-c4ea-4b47-ae30-a7d9577fc3f9';
+    const INPUT_REPORT_REQUEST_FEEDBACK_UUID = '10a50008-c4ea-4b47-ae30-a7d9577fc3f9';
+    const INPUT_REPORT_KEEPALIVE_UUID = '10a50009-c4ea-4b47-ae30-a7d9577fc3f9';
+    const OUTPUT_REPORT_KEEPALIVE_RESPONSE_UUID = '10a5000a-c4ea-4b47-ae30-a7d9577fc3f9';
+    
+    // Control Report (0x01) - Standard1 Bits
+    const WDI_CTRL = {
+      MODIFIER: 0,
+      STOP: 1,
+      DRIVE_ENABLE: 2,
+      CYCLE_PROFILE: 3,
+      HAZARDS: 4,
+      CYCLE_MODE: 5,
+      SPEED_DOWN: 6,
+      SPEED_UP: 7,
+      LEFT_BLINKER: 8,
+      RIGHT_BLINKER: 9,
+      MENU: 10,
+      PROFILE_UP: 11,
+      DRIVE_DISABLE: 12,
+      HEADLIGHTS: 13,
+      HORN: 14,
+      PROFILE_DOWN: 15,
+      MEMORY_1: 16,
+      MEMORY_2: 17,
+      MEMORY_3: 18,
+      MEMORY_4: 19,
+      MEMORY_5: 20,
+      MEMORY_6: 21,
+      MEMORY_HOME: 22,
+      TILT: 24,
+      RECLINE: 25,
+      LEGS: 26,
+      ELEVATE: 27,
+      FOOTPLATES: 28,
+      STAND: 29,
+      SEAT_TBD1: 30,
+      SEAT_TBD2: 31
+    };
+    
+    // Control Report - Vendor1 Bits
+    const WDI_VENDOR = {
+      MODIFIER: 0,
+      LUCI_OVERRIDE: 1,
+      LUCI_REACT: 2
+    };
+    
+    // Feedback Report (0x02) - Standard Bits
+    const WDI_FB = {
+      DRIVE_DISABLED: 0,
+      DRIVE_ENABLED: 1,
+      MODE_DRIVE: 2,
+      MODE_SEATING: 3,
+      LEFT_BLINKER_OFF: 4,
+      LEFT_BLINKER_ON: 5,
+      RIGHT_BLINKER_OFF: 6,
+      RIGHT_BLINKER_ON: 7,
+      HEADLIGHTS_OFF: 8,
+      HEADLIGHTS_ON: 9,
+      HAZARDS_OFF: 10,
+      HAZARDS_ON: 11,
+      NO_MOVEMENT_RESTRICTION: 12,
+      LIMITED_SPEED: 13,
+      NO_MOVEMENT: 14
+    };
+    
+    // Feedback Vendor1 Bits
+    const WDI_FB_VENDOR = {
+      LUCI_OVERRIDE_OFF: 0,
+      LUCI_OVERRIDE_ON: 1,
+      LUCI_REACT_OFF: 2,
+      LUCI_REACT_ON: 3
+    };
+    
+    // =========================================================================
+    // State
+    // =========================================================================
+    
+    var hidDevice = null;
+    var hidConnected = false;
+    
+    var bleDevice = null;
+    var bleServer = null;
+    var bleService = null;
+    var bleConnected = false;
+    var bleAutoReconnect = false;  // Auto-reconnect after keepalive timeout
+    var bleDisconnecting = false;  // Prevent recursive disconnect calls
+    var bleCharacteristics = {
+      inputReportControl: null,
+      outputReportFeedback: null,
+      inputReportRequestFeedback: null,
+      inputReportKeepalive: null,
+      outputReportKeepaliveResponse: null
+    };
+    
+    var activeSource = null;
+    var eventId = 0;
+    var events = [];
+    
+    var wdiState = {
+      forward: 0, turn: 0, speed: 3, mode: 'drive', profile: 1,
+      eStop: false, headlight: false, hazards: false,
+      leftBlinker: false, rightBlinker: false, horn: false,
+      driveEnabled: false, menuOpen: false,
+      luciOverride: false, luciReact: false
+    };
+    
+    var seatingState = {
+      memory: null,
+      tilt: 0, recline: 0, legrest: 0, elevate: 0, footplates: 0, stand: 0
+    };
+    
+    var lastFeedbackReport = null;
+    
+    // Request Feedback and Keepalive tracking
+    var reqFbCount = 0;
+    var keepaliveCount = 0;
+    var keepaliveTimerId = null;
+    var missedKeepaliveCount = 0;
+    
+    // Host UUID (16 bytes) - fixed for the lifetime of this host instance
+    var hostUUID = new Uint8Array([
+      0x7A, 0xE3, 0x4B, 0x91, 0xC2, 0x0F, 0x48, 0xD6,
+      0xA1, 0x5E, 0x3D, 0x82, 0xF7, 0x60, 0x19, 0xB4
+    ]);
+    
+    // Edge detection state
+    var prevStandard1 = 0;
+    var prevVendor1 = 0;
+
+    function $(id) { return document.getElementById(id); }
+    
+    // Helper to check for rising edge
+    function risingEdge(currentBits, prevBits, bit) {
+      var currentPressed = !!(currentBits & (1 << bit));
+      var wasPressed = !!(prevBits & (1 << bit));
+      return currentPressed && !wasPressed;
+    }
+
+    // =========================================================================
+    // Tab Navigation
+    // =========================================================================
+    
+    function setMappingTab(activeTab) {
+      var tabs = ['tabControl', 'tabFeedback', 'tabReqFb', 'tabKeepalive', 'tabKeepaliveResp'];
+      var panels = ['mappingControl', 'mappingFeedback', 'mappingReqFb', 'mappingKeepalive', 'mappingKeepaliveResp'];
+      for (var i = 0; i < tabs.length; i++) {
+        $(tabs[i]).classList.remove('active');
+        $(panels[i]).style.display = 'none';
+      }
+      $(activeTab).classList.add('active');
+      var panelId = activeTab.replace('tab', 'mapping');
+      if (activeTab === 'tabControl') panelId = 'mappingControl';
+      else if (activeTab === 'tabFeedback') panelId = 'mappingFeedback';
+      else if (activeTab === 'tabReqFb') panelId = 'mappingReqFb';
+      else if (activeTab === 'tabKeepalive') panelId = 'mappingKeepalive';
+      else if (activeTab === 'tabKeepaliveResp') panelId = 'mappingKeepaliveResp';
+      $(panelId).style.display = 'block';
+    }
+    
+    $('tabControl').onclick = function() { setMappingTab('tabControl'); };
+    $('tabFeedback').onclick = function() { setMappingTab('tabFeedback'); };
+    $('tabReqFb').onclick = function() { setMappingTab('tabReqFb'); };
+    $('tabKeepalive').onclick = function() { setMappingTab('tabKeepalive'); };
+    $('tabKeepaliveResp').onclick = function() { setMappingTab('tabKeepaliveResp'); };
+
+    // =========================================================================
+    // Wheelchair HID Parsing
+    // =========================================================================
+    
+    function parseWheelchairControlReport(data) {
+      var bytes = new Uint8Array(data.buffer || data);
+      if (bytes.length < 18) {
+        console.warn('Control report too short:', bytes.length, 'expected 18');
+        return null;
+      }
+      
+      var x = bytes[0];
+      var y = bytes[1];
+      if (x > 127) x -= 256;
+      if (y > 127) y -= 256;
+      
+      function readUInt32LE(arr, offset) {
+        return (arr[offset] | (arr[offset + 1] << 8) | (arr[offset + 2] << 16) | (arr[offset + 3] << 24)) >>> 0;
+      }
+      
+      var standard1 = readUInt32LE(bytes, 2);
+      var standard2 = readUInt32LE(bytes, 6);
+      var vendor1 = readUInt32LE(bytes, 10);
+      var vendor2 = readUInt32LE(bytes, 14);
+      
+      return {
+        x: x,
+        y: y,
+        standard1: standard1,
+        standard2: standard2,
+        vendor1: vendor1,
+        vendor2: vendor2,
+        raw: bytes
+      };
+    }
+    
+    function processWheelchairInput(report) {
+      if (!report) return;
+      
+      var s1 = report.standard1;
+      var v1 = report.vendor1;
+      var modifier = !!(s1 & (1 << WDI_CTRL.MODIFIER));
+      
+      // Drive enable/disable
+      if (s1 & (1 << WDI_CTRL.DRIVE_ENABLE)) {
+        wdiState.driveEnabled = true;
+      }
+      if (s1 & (1 << WDI_CTRL.DRIVE_DISABLE)) {
+        wdiState.driveEnabled = false;
+      }
+      
+      // Joystick
+      if (wdiState.driveEnabled) {
+        wdiState.turn = report.x / 127;
+        wdiState.forward = -report.y / 127;
+      } else {
+        wdiState.turn = 0;
+        wdiState.forward = 0;
+      }
+      
+      // HOLD controls
+      wdiState.eStop = !!(s1 & (1 << WDI_CTRL.STOP));
+      wdiState.horn = !!(s1 & (1 << WDI_CTRL.HORN));
+      
+      seatingState.memory = null;
+      if (s1 & (1 << WDI_CTRL.MEMORY_1)) seatingState.memory = 1;
+      if (s1 & (1 << WDI_CTRL.MEMORY_2)) seatingState.memory = 2;
+      if (s1 & (1 << WDI_CTRL.MEMORY_3)) seatingState.memory = 3;
+      if (s1 & (1 << WDI_CTRL.MEMORY_4)) seatingState.memory = 4;
+      if (s1 & (1 << WDI_CTRL.MEMORY_5)) seatingState.memory = 5;
+      if (s1 & (1 << WDI_CTRL.MEMORY_6)) seatingState.memory = 6;
+      if (s1 & (1 << WDI_CTRL.MEMORY_HOME)) seatingState.memory = 'Home';
+      
+      seatingState.tilt = (s1 & (1 << WDI_CTRL.TILT)) ? (modifier ? -1 : 1) : 0;
+      seatingState.recline = (s1 & (1 << WDI_CTRL.RECLINE)) ? (modifier ? -1 : 1) : 0;
+      seatingState.legrest = (s1 & (1 << WDI_CTRL.LEGS)) ? (modifier ? -1 : 1) : 0;
+      seatingState.elevate = (s1 & (1 << WDI_CTRL.ELEVATE)) ? (modifier ? -1 : 1) : 0;
+      seatingState.footplates = (s1 & (1 << WDI_CTRL.FOOTPLATES)) ? (modifier ? -1 : 1) : 0;
+      seatingState.stand = (s1 & (1 << WDI_CTRL.STAND)) ? (modifier ? -1 : 1) : 0;
+      
+      // TOGGLE controls
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.HEADLIGHTS)) {
+        wdiState.headlight = !wdiState.headlight;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.HAZARDS)) {
+        wdiState.hazards = !wdiState.hazards;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.LEFT_BLINKER)) {
+        wdiState.leftBlinker = !wdiState.leftBlinker;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.RIGHT_BLINKER)) {
+        wdiState.rightBlinker = !wdiState.rightBlinker;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.CYCLE_MODE)) {
+        wdiState.mode = wdiState.mode === 'drive' ? 'seating' : 'drive';
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.MENU)) {
+        wdiState.menuOpen = !wdiState.menuOpen;
+      }
+      
+      if (risingEdge(v1, prevVendor1, WDI_VENDOR.LUCI_OVERRIDE)) {
+        wdiState.luciOverride = !wdiState.luciOverride;
+      }
+      if (risingEdge(v1, prevVendor1, WDI_VENDOR.LUCI_REACT)) {
+        wdiState.luciReact = !wdiState.luciReact;
+      }
+      
+      // INCREMENT controls
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.CYCLE_PROFILE)) {
+        wdiState.profile = wdiState.profile >= 10 ? 1 : wdiState.profile + 1;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.PROFILE_UP)) {
+        if (wdiState.profile < 10) wdiState.profile++;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.PROFILE_DOWN)) {
+        if (wdiState.profile > 1) wdiState.profile--;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.SPEED_UP)) {
+        if (wdiState.speed < 10) wdiState.speed++;
+      }
+      if (risingEdge(s1, prevStandard1, WDI_CTRL.SPEED_DOWN)) {
+        if (wdiState.speed > 1) wdiState.speed--;
+      }
+      
+      prevStandard1 = s1;
+      prevVendor1 = v1;
+      
+      updateWDIDisplay();
+      updateSeatingDisplay();
+    }
+    
+    // =========================================================================
+    // Feedback Report Generation
+    // =========================================================================
+    
+    function buildFeedbackData(state) {
+      var data = new Uint8Array(19);
+      
+      var standard = 0;
+      
+      if (!state.driveEnabled) standard |= (1 << WDI_FB.DRIVE_DISABLED);
+      if (state.driveEnabled) standard |= (1 << WDI_FB.DRIVE_ENABLED);
+      
+      if (state.mode === 'drive') standard |= (1 << WDI_FB.MODE_DRIVE);
+      if (state.mode === 'seating') standard |= (1 << WDI_FB.MODE_SEATING);
+      
+      if (!state.leftBlinker) standard |= (1 << WDI_FB.LEFT_BLINKER_OFF);
+      if (state.leftBlinker) standard |= (1 << WDI_FB.LEFT_BLINKER_ON);
+      
+      if (!state.rightBlinker) standard |= (1 << WDI_FB.RIGHT_BLINKER_OFF);
+      if (state.rightBlinker) standard |= (1 << WDI_FB.RIGHT_BLINKER_ON);
+      
+      if (!state.headlights) standard |= (1 << WDI_FB.HEADLIGHTS_OFF);
+      if (state.headlights) standard |= (1 << WDI_FB.HEADLIGHTS_ON);
+      
+      if (!state.hazards) standard |= (1 << WDI_FB.HAZARDS_OFF);
+      if (state.hazards) standard |= (1 << WDI_FB.HAZARDS_ON);
+      
+      if (state.noMovementRestriction) standard |= (1 << WDI_FB.NO_MOVEMENT_RESTRICTION);
+      if (state.limitedSpeed) standard |= (1 << WDI_FB.LIMITED_SPEED);
+      if (state.noMovement) standard |= (1 << WDI_FB.NO_MOVEMENT);
+      
+      data[0] = standard & 0xFF;
+      data[1] = (standard >> 8) & 0xFF;
+      data[2] = (standard >> 16) & 0xFF;
+      data[3] = (standard >> 24) & 0xFF;
+      
+      var vendor1 = 0;
+      if (!state.luciOverride) vendor1 |= (1 << WDI_FB_VENDOR.LUCI_OVERRIDE_OFF);
+      if (state.luciOverride) vendor1 |= (1 << WDI_FB_VENDOR.LUCI_OVERRIDE_ON);
+      if (!state.luciReact) vendor1 |= (1 << WDI_FB_VENDOR.LUCI_REACT_OFF);
+      if (state.luciReact) vendor1 |= (1 << WDI_FB_VENDOR.LUCI_REACT_ON);
+      
+      data[4] = vendor1 & 0xFF;
+      data[5] = (vendor1 >> 8) & 0xFF;
+      data[6] = (vendor1 >> 16) & 0xFF;
+      data[7] = (vendor1 >> 24) & 0xFF;
+      
+      data[8] = 0; data[9] = 0; data[10] = 0; data[11] = 0;
+      
+      var speedNibble = (state.speed & 0x0F);
+      var profileNibble = (state.profile & 0x0F);
+      data[12] = ((speedNibble << 4) | profileNibble) & 0xFF;
+      
+      var velWhole = (state.velocity !== undefined) ? Math.floor(state.velocity) & 0x0F : 0;
+      var velTenths = (state.velocity !== undefined) ? Math.round((state.velocity % 1) * 10) & 0x0F : 0;
+      data[13] = ((velWhole << 4) | velTenths) & 0xFF;
+      
+      data[14] = (state.odometer !== undefined) ? state.odometer & 0xFF : 0;
+      
+      data[15] = 0; data[16] = 0; data[17] = 0; data[18] = 0;
+      
+      return {
+        data: data,
+        state: state
+      };
+    }
+    
+    function generateRandomFeedbackReport() {
+      var driveEnabled = Math.random() > 0.5;
+      var modeIsDrive = Math.random() > 0.3;
+      var leftBlinkerOn = Math.random() > 0.8;
+      var rightBlinkerOn = Math.random() > 0.8;
+      var headlightsOn = Math.random() > 0.5;
+      var hazardsOn = Math.random() > 0.9;
+      var profile = Math.floor(Math.random() * 10) + 1;
+      var speed = Math.floor(Math.random() * 10) + 1;
+      var luciOverrideOn = Math.random() > 0.7;
+      var luciReactOn = Math.random() > 0.8;
+      var velocity = Math.round(Math.random() * 80) / 10;
+      var odometer = Math.floor(Math.random() * 256);
+      
+      return buildFeedbackData({
+        driveEnabled: driveEnabled,
+        mode: modeIsDrive ? 'drive' : 'seating',
+        leftBlinker: leftBlinkerOn,
+        rightBlinker: rightBlinkerOn,
+        headlights: headlightsOn,
+        hazards: hazardsOn,
+        profile: profile,
+        speed: speed,
+        luciOverride: luciOverrideOn,
+        luciReact: luciReactOn,
+        velocity: velocity,
+        odometer: odometer,
+        noMovementRestriction: Math.random() > 0.5,
+        limitedSpeed: Math.random() > 0.8,
+        noMovement: Math.random() > 0.9
+      });
+    }
+    
+    function generateCurrentSettingsFeedbackReport() {
+      return buildFeedbackData({
+        driveEnabled: wdiState.driveEnabled,
+        mode: wdiState.mode,
+        leftBlinker: wdiState.leftBlinker,
+        rightBlinker: wdiState.rightBlinker,
+        headlights: wdiState.headlight,
+        hazards: wdiState.hazards,
+        profile: wdiState.profile,
+        speed: wdiState.speed,
+        luciOverride: wdiState.luciOverride,
+        luciReact: wdiState.luciReact,
+        velocity: 0,
+        odometer: 0,
+        noMovementRestriction: false,
+        limitedSpeed: false,
+        noMovement: false
+      });
+    }
+    
+    async function sendFeedbackReport(report) {
+      lastFeedbackReport = report;
+      
+      var success = false;
+      var message = '';
+      
+      // Try USB HID first
+      if (hidDevice && hidConnected) {
+        try {
+          await hidDevice.sendReport(0x02, report.data);
+          message = 'Feedback sent via USB HID';
+          success = true;
+        } catch (err) {
+          message = 'USB HID send failed: ' + err.message;
+        }
+      }
+      
+      // Try BLE if USB failed or not connected
+      if (!success && bleConnected && bleCharacteristics.outputReportFeedback) {
+        try {
+          await bleCharacteristics.outputReportFeedback.writeValue(report.data);
+          message = (message ? message + ' | ' : '') + 'Feedback sent via BLE';
+          success = true;
+        } catch (err) {
+          message = (message ? message + ' | ' : '') + 'BLE send failed: ' + err.message;
+        }
+      }
+      
+      if (!success && !hidConnected && !bleConnected) {
+        message = 'Simulated feedback (no connection)';
+      }
+      
+      $('feedbackStatus').textContent = message + ' at ' + new Date().toLocaleTimeString();
+      $('feedbackStatus').style.color = success ? '#4ade80' : (hidConnected || bleConnected ? '#ef4444' : '#60a5fa');
+      
+      updateFeedbackDisplay(report);
+      addEvent('feedback', null, null, report);
+    }
+    
+    async function sendRandomFeedback() {
+      var report = generateRandomFeedbackReport();
+      await sendFeedbackReport(report);
+    }
+    
+    async function sendCurrentSettingsFeedback() {
+      var report = generateCurrentSettingsFeedbackReport();
+      await sendFeedbackReport(report);
+    }
+    
+    function updateFeedbackDisplay(report) {
+      if (!report) return;
+      
+      var s = report.state;
+      var hexStr = Array.from(report.data).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+      
+      var velocityStr = (s.velocity !== undefined) ? s.velocity.toFixed(1) + ' mph' : '0.0 mph';
+      var odometerStr = (s.odometer !== undefined) ? s.odometer.toString() : '0';
+      
+      var html = '<div class="raw-box" style="margin-bottom:0.5rem;">';
+      html += '<div class="label">Raw Bytes (19)</div>';
+      html += '<div class="hex">' + hexStr + '</div>';
+      html += '</div>';
+      
+      html += '<div class="feedback-grid">';
+      html += '<div class="feedback-item' + (s.driveEnabled ? ' active' : '') + '">Drive: ' + (s.driveEnabled ? 'Enabled' : 'Disabled') + '</div>';
+      html += '<div class="feedback-item">Mode: ' + (s.mode || 'drive').toUpperCase() + '</div>';
+      html += '<div class="feedback-item">Profile: ' + s.profile + '</div>';
+      html += '<div class="feedback-item">Speed: ' + s.speed + '</div>';
+      html += '<div class="feedback-item">Velocity: ' + velocityStr + '</div>';
+      html += '<div class="feedback-item">Odometer: ' + odometerStr + '</div>';
+      html += '<div class="feedback-item' + (s.headlights ? ' active' : '') + '">Headlights: ' + (s.headlights ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.hazards ? ' active' : '') + '">Hazards: ' + (s.hazards ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.leftBlinker ? ' active' : '') + '">L Blinker: ' + (s.leftBlinker ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.rightBlinker ? ' active' : '') + '">R Blinker: ' + (s.rightBlinker ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.luciOverride ? ' active' : '') + '">LUCI Override: ' + (s.luciOverride ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.luciReact ? ' active' : '') + '">LUCI React: ' + (s.luciReact ? 'ON' : 'OFF') + '</div>';
+      html += '<div class="feedback-item' + (s.noMovementRestriction ? ' active' : '') + '">No Mvmt Restriction: ' + (s.noMovementRestriction ? 'YES' : 'NO') + '</div>';
+      html += '<div class="feedback-item' + (s.limitedSpeed ? ' active' : '') + '">Limited Speed: ' + (s.limitedSpeed ? 'YES' : 'NO') + '</div>';
+      html += '<div class="feedback-item' + (s.noMovement ? ' active' : '') + '">No Movement: ' + (s.noMovement ? 'YES' : 'NO') + '</div>';
+      html += '</div>';
+      
+      $('feedbackData').innerHTML = html;
+    }
+    
+    $('sendFeedbackBtn').onclick = sendRandomFeedback;
+
+    // =========================================================================
+    // USB HID Connection
+    // =========================================================================
+    
+    function showHidError(msg) {
+      $('hidError').textContent = msg;
+      $('hidError').style.display = msg ? 'block' : 'none';
+    }
+
+    function handleHIDReport(e) {
+      if (e.reportId === 0x01) {
+        var report = parseWheelchairControlReport(e.data);
+        if (report) {
+          activeSource = 'hid';
+          missedKeepaliveCount = 0;
+          resetKeepaliveTimer();
+          processWheelchairInput(report);
+          updateRawDisplay('hid', report);
+          
+          var pressedBits = [];
+          for (var i = 0; i < 32; i++) {
+            if (report.standard1 & (1 << i)) pressedBits.push('S1.' + i);
+          }
+          for (var i = 0; i < 32; i++) {
+            if (report.vendor1 & (1 << i)) pressedBits.push('V1.' + i);
+          }
+          addEvent('hid', [report.x, report.y], pressedBits, report);
+        }
+      } else if (e.reportId === 0x03) {
+        reqFbCount++;
+        missedKeepaliveCount = 0;
+        resetKeepaliveTimer();
+        var ts = new Date().toLocaleTimeString();
+        $('reqFbStatus').textContent = 'Received #' + reqFbCount + ' at ' + ts + ' — sending current settings feedback';
+        $('reqFbStatus').style.color = '#f59e0b';
+        addEvent('reqfb', null, null, { count: reqFbCount });
+        sendCurrentSettingsFeedback();
+      } else if (e.reportId === 0x04) {
+        keepaliveCount++;
+        missedKeepaliveCount = 0;
+        var ts = new Date().toLocaleTimeString();
+        $('keepaliveStatus').textContent = 'Received #' + keepaliveCount + ' at ' + ts;
+        $('keepaliveStatus').style.color = '#22d3ee';
+        addEvent('keepalive', null, null, { count: keepaliveCount });
+        
+        sendKeepaliveResponse();
+        resetKeepaliveTimer();
+      }
+    }
+    
+    async function sendKeepaliveResponse() {
+      if (hidDevice && hidConnected) {
+        try {
+          await hidDevice.sendReport(0x05, hostUUID);
+          if ($('debugMode').checked) {
+            var hexStr = Array.from(hostUUID).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+            console.log('Sent Keepalive Response (USB HID): ' + hexStr);
+          }
+        } catch (err) {
+          console.warn('Failed to send Keepalive Response via USB HID:', err.message);
+        }
+      }
+      
+      if (bleConnected && bleCharacteristics.outputReportKeepaliveResponse) {
+        try {
+          await bleCharacteristics.outputReportKeepaliveResponse.writeValue(hostUUID);
+          if ($('debugMode').checked) {
+            var hexStr = Array.from(hostUUID).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
+            console.log('Sent Keepalive Response (BLE): ' + hexStr);
+          }
+        } catch (err) {
+          console.warn('Failed to send Keepalive Response via BLE:', err.message);
+        }
+      }
+    }
+    
+    function resetKeepaliveTimer() {
+      if (keepaliveTimerId !== null) {
+        clearTimeout(keepaliveTimerId);
+        keepaliveTimerId = null;
+      }
+      keepaliveTimerId = setTimeout(function() {
+        onKeepaliveMissed();
+      }, 257);
+    }
+    
+    function onKeepaliveMissed() {
+      missedKeepaliveCount++;
+      var ts = new Date().toLocaleTimeString();
+      
+      if (missedKeepaliveCount >= 3) {
+        $('keepaliveStatus').textContent = '3 consecutive report timeouts at ' + ts + ' — Release + Drive Disable';
+        $('keepaliveStatus').style.color = '#ef4444';
+        addEvent('keepalive', null, null, { count: keepaliveCount, missed: 3, action: 'Release + Drive Disable' });
+        
+        // Process Release Report
+        wdiState.forward = 0;
+        wdiState.turn = 0;
+        wdiState.eStop = false;
+        wdiState.horn = false;
+        seatingState.memory = null;
+        seatingState.tilt = 0;
+        seatingState.recline = 0;
+        seatingState.legrest = 0;
+        seatingState.elevate = 0;
+        seatingState.footplates = 0;
+        seatingState.stand = 0;
+        prevStandard1 = 0;
+        prevVendor1 = 0;
+        
+        // Disable Drive
+        wdiState.driveEnabled = false;
+        
+        updateWDIDisplay();
+        updateSeatingDisplay();
+        
+        // Disconnect if BLE and trigger auto-reconnect
+        if (bleConnected) {
+          if ($('debugMode').checked) {
+            console.log('Keepalive timeout - bleConnected:', bleConnected);
+            console.log('bleAutoReconnect before saving:', bleAutoReconnect);
+            console.log('bleDevice exists:', !!bleDevice);
+          }
+          
+          var shouldReconnect = bleAutoReconnect;  // Save before disconnect clears it
+          
+          if ($('debugMode').checked) {
+            console.log('shouldReconnect saved as:', shouldReconnect);
+          }
+          
+          disconnectBLE();
+          
+          if ($('debugMode').checked) {
+            console.log('After disconnectBLE - bleDevice exists:', !!bleDevice);
+            console.log('bleAutoReconnect after disconnect:', bleAutoReconnect);
+          }
+          
+          if (shouldReconnect) {
+            if ($('debugMode').checked) {
+              console.log('Keepalive timeout - will auto-reconnect in 2 seconds...');
+            }
+            $('bleError').textContent = 'Keepalive timeout - reconnecting in 2s...';
+            $('bleError').style.display = 'block';
+            $('bleError').style.background = 'rgba(127, 85, 29, 0.5)';
+            $('bleError').style.borderColor = '#f59e0b';
+            $('bleError').style.color = '#fde68a';
+            
+            setTimeout(function() {
+              reconnectBLE();
+            }, 2000);
+          }
+        }
+        
+        keepaliveTimerId = null;
+        missedKeepaliveCount = 0;
+      } else {
+        $('keepaliveStatus').textContent = missedKeepaliveCount + ' report timeout(s) at ' + ts + ' — waiting for next...';
+        $('keepaliveStatus').style.color = '#f59e0b';
+        
+        keepaliveTimerId = setTimeout(function() {
+          onKeepaliveMissed();
+        }, 257);
+      }
+    }
+
+    async function connectHID() {
+      showHidError('');
+      if (!('hid' in navigator)) { showHidError('WebHID not supported. Use Chrome/Edge/Opera.'); return; }
+      try {
+        var devices = await navigator.hid.requestDevice({ filters: [] });
+        if (!devices.length) { showHidError('No device selected'); return; }
+        hidDevice = devices[0];
+        if (!hidDevice.opened) await hidDevice.open();
+
+        var html = '<div class="info-box active"><div class="name">' + (hidDevice.productName || 'Unknown Device') + '<span class="source-badge source-hid">HID</span></div>';
+        html += '<div class="vid">VID: 0x' + hidDevice.vendorId.toString(16).padStart(4, '0') + ' | PID: 0x' + hidDevice.productId.toString(16).padStart(4, '0') + '</div></div>';
+        $('hidInfo').innerHTML = html;
+        $('hidInfo').style.display = 'block';
+
+        hidDevice.addEventListener('inputreport', handleHIDReport);
+        hidConnected = true;
+        activeSource = 'hid';
+        $('hidBtn').textContent = 'Disconnect HID';
+        $('hidBtn').className = 'btn btn-red';
+      } catch (err) {
+        showHidError('Connection failed: ' + (err.message || err.name));
+      }
+    }
+
+    async function disconnectHID() {
+      if (hidDevice) {
+        hidDevice.removeEventListener('inputreport', handleHIDReport);
+        try { await hidDevice.close(); } catch (e) { }
+        hidDevice = null;
+      }
+      hidConnected = false;
+      if (!bleConnected) activeSource = null;
+      $('hidBtn').textContent = 'Connect HID Device';
+      $('hidBtn').className = 'btn btn-blue';
+      $('hidInfo').style.display = 'none';
+      
+      if (keepaliveTimerId !== null) {
+        clearTimeout(keepaliveTimerId);
+        keepaliveTimerId = null;
+      }
+      missedKeepaliveCount = 0;
+    }
+
+    $('hidBtn').onclick = function() { hidConnected ? disconnectHID() : connectHID(); };
+
+    // =========================================================================
+    // BLE Connection
+    // =========================================================================
+    
+    function showBleError(msg) {
+      $('bleError').textContent = msg;
+      $('bleError').style.display = msg ? 'block' : 'none';
+    }
+    
+    function handleBLEControlNotification(event) {
+      var value = event.target.value;
+      var bytes = new Uint8Array(value.buffer);
+      
+      if ($('debugMode').checked) {
+        console.log('BLE Control notification:', bytes);
+      }
+      
+      var report = parseWheelchairControlReport(bytes);
+      if (report) {
+        activeSource = 'ble';
+        missedKeepaliveCount = 0;
+        resetKeepaliveTimer();
+        processWheelchairInput(report);
+        updateRawDisplay('ble', report);
+        
+        var pressedBits = [];
+        for (var i = 0; i < 32; i++) {
+          if (report.standard1 & (1 << i)) pressedBits.push('S1.' + i);
+        }
+        for (var i = 0; i < 32; i++) {
+          if (report.vendor1 & (1 << i)) pressedBits.push('V1.' + i);
+        }
+        addEvent('ble', [report.x, report.y], pressedBits, report);
+      }
+    }
+    
+    function handleBLERequestFeedbackNotification(event) {
+      var value = event.target.value;
+      var bytes = new Uint8Array(value.buffer);
+      
+      if ($('debugMode').checked) {
+        console.log('BLE Request Feedback notification:', bytes);
+      }
+      
+      if (bytes.length === 1 && bytes[0] === 0x01) {
+        reqFbCount++;
+        missedKeepaliveCount = 0;
+        resetKeepaliveTimer();
+        var ts = new Date().toLocaleTimeString();
+        $('reqFbStatus').textContent = 'Received #' + reqFbCount + ' at ' + ts + ' (BLE) — sending current settings feedback';
+        $('reqFbStatus').style.color = '#f59e0b';
+        addEvent('reqfb', null, null, { count: reqFbCount, source: 'ble' });
+        sendCurrentSettingsFeedback();
+      }
+    }
+    
+    function handleBLEKeepaliveNotification(event) {
+      var value = event.target.value;
+      var bytes = new Uint8Array(value.buffer);
+      
+      if ($('debugMode').checked) {
+        console.log('BLE Keepalive notification:', bytes);
+      }
+      
+      if (bytes.length === 1 && bytes[0] === 0x01) {
+        keepaliveCount++;
+        missedKeepaliveCount = 0;
+        var ts = new Date().toLocaleTimeString();
+        $('keepaliveStatus').textContent = 'Received #' + keepaliveCount + ' at ' + ts + ' (BLE)';
+        $('keepaliveStatus').style.color = '#22d3ee';
+        addEvent('keepalive', null, null, { count: keepaliveCount, source: 'ble' });
+        
+        sendKeepaliveResponse();
+        resetKeepaliveTimer();
+      }
+    }
+    
+    var bleReconnectAttempts = 0;
+    var bleMaxReconnectAttempts = 3;
+    
+    async function reconnectBLE() {
+      if (!bleDevice) {
+        if ($('debugMode').checked) {
+          console.log('Cannot auto-reconnect - no device reference');
+        }
+        showBleError('Auto-reconnect failed - no device reference');
+        bleAutoReconnect = false;  // Disable auto-reconnect if device is gone
+        bleReconnectAttempts = 0;
+        return;
+      }
+      
+      bleReconnectAttempts++;
+      
+      if ($('debugMode').checked) {
+        console.log('Auto-reconnect attempt', bleReconnectAttempts, 'of', bleMaxReconnectAttempts);
+      }
+      
+      showBleError('');
+      
+      if ($('debugMode').checked) {
+        console.log('Attempting auto-reconnect to BLE device:', bleDevice.name);
+        console.log('Device GATT connected:', bleDevice.gatt.connected);
+        console.log('bleAutoReconnect flag:', bleAutoReconnect);
+        console.log('bleDisconnecting flag:', bleDisconnecting);
+      }
+      
+      try {
+        // If already connected, disconnect first
+        if (bleDevice.gatt.connected) {
+          if ($('debugMode').checked) {
+            console.log('Device still connected, disconnecting first...');
+          }
+          try {
+            bleDevice.gatt.disconnect();
+          } catch (e) {
+            if ($('debugMode').checked) {
+              console.log('Disconnect during reconnect failed (non-fatal):', e);
+            }
+          }
+          // Wait a bit for disconnect to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if ($('debugMode').checked) {
+          console.log('Calling bleDevice.gatt.connect()...');
+        }
+        
+        bleServer = await bleDevice.gatt.connect();
+        
+        if ($('debugMode').checked) {
+          console.log('GATT server reconnected');
+        }
+        
+        bleService = await bleServer.getPrimaryService(WHEELCHAIR_SERVICE_UUID);
+        
+        if ($('debugMode').checked) {
+          console.log('Wheelchair HID service rediscovered');
+        }
+        
+        // Rediscover and re-enable notifications on characteristics
+        try {
+          bleCharacteristics.inputReportControl = await bleService.getCharacteristic(INPUT_REPORT_CONTROL_UUID);
+          await bleCharacteristics.inputReportControl.startNotifications();
+          bleCharacteristics.inputReportControl.addEventListener('characteristicvaluechanged', handleBLEControlNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Control) notifications re-enabled');
+          }
+        } catch (err) {
+          showBleError('Failed to re-enable Control notifications: ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        // Output Report Feedback (recommended)
+        try {
+          bleCharacteristics.outputReportFeedback = await bleService.getCharacteristic(OUTPUT_REPORT_FEEDBACK_UUID);
+          if ($('debugMode').checked) {
+            console.log('Output Report (Feedback) characteristic rediscovered');
+          }
+        } catch (err) {
+          if ($('debugMode').checked) {
+            console.log('Output Report (Feedback) not available (optional)');
+          }
+        }
+        
+        // Request Feedback (recommended)
+        try {
+          bleCharacteristics.inputReportRequestFeedback = await bleService.getCharacteristic(INPUT_REPORT_REQUEST_FEEDBACK_UUID);
+          await bleCharacteristics.inputReportRequestFeedback.startNotifications();
+          bleCharacteristics.inputReportRequestFeedback.addEventListener('characteristicvaluechanged', handleBLERequestFeedbackNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Request Feedback) notifications re-enabled');
+          }
+        } catch (err) {
+          if ($('debugMode').checked) {
+            console.log('Input Report (Request Feedback) not available (optional)');
+          }
+        }
+        
+        // Keepalive (mandatory)
+        try {
+          bleCharacteristics.inputReportKeepalive = await bleService.getCharacteristic(INPUT_REPORT_KEEPALIVE_UUID);
+          await bleCharacteristics.inputReportKeepalive.startNotifications();
+          bleCharacteristics.inputReportKeepalive.addEventListener('characteristicvaluechanged', handleBLEKeepaliveNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Keepalive) notifications re-enabled');
+          }
+        } catch (err) {
+          showBleError('Failed to re-enable Keepalive notifications: ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        // Keepalive Response (mandatory)
+        try {
+          bleCharacteristics.outputReportKeepaliveResponse = await bleService.getCharacteristic(OUTPUT_REPORT_KEEPALIVE_RESPONSE_UUID);
+          if ($('debugMode').checked) {
+            console.log('Output Report (Keepalive Response) characteristic rediscovered');
+          }
+        } catch (err) {
+          showBleError('Failed to rediscover Keepalive Response characteristic: ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        var html = '<div class="info-box active"><div class="name">' + (bleDevice.name || 'Unknown Device') + '<span class="source-badge source-ble">BLE</span></div>';
+        html += '<div class="vid">Wheelchair HID Service (reconnected)</div></div>';
+        $('bleInfo').innerHTML = html;
+        $('bleInfo').style.display = 'block';
+        
+        bleConnected = true;
+        bleAutoReconnect = true;  // Maintain auto-reconnect
+        bleReconnectAttempts = 0;  // Reset counter on success
+        activeSource = 'ble';
+        $('bleBtn').textContent = 'Disconnect BLE';
+        $('bleBtn').className = 'btn btn-red';
+        
+        if ($('debugMode').checked) {
+          console.log('BLE auto-reconnection successful');
+        }
+        
+        addEvent('ble', null, null, { action: 'Auto-reconnected after keepalive timeout' });
+        
+      } catch (err) {
+        if ($('debugMode').checked) {
+          console.log('Auto-reconnect attempt failed:', err.message);
+        }
+        
+        // Retry if we haven't exceeded max attempts
+        if (bleReconnectAttempts < bleMaxReconnectAttempts) {
+          var delay = bleReconnectAttempts * 1000;  // 1s, 2s, 3s
+          if ($('debugMode').checked) {
+            console.log('Will retry in', delay, 'ms');
+          }
+          showBleError('Auto-reconnect attempt ' + bleReconnectAttempts + ' failed - retrying in ' + (delay/1000) + 's...');
+          
+          setTimeout(function() {
+            reconnectBLE();
+          }, delay);
+        } else {
+          // Max attempts reached
+          showBleError('Auto-reconnect failed after ' + bleMaxReconnectAttempts + ' attempts: ' + (err.message || err.name));
+          bleAutoReconnect = false;  // Stop trying to reconnect
+          bleReconnectAttempts = 0;
+          disconnectBLE();
+        }
+      }
+    }
+    
+    async function connectBLE() {
+      showBleError('');
+      if (!('bluetooth' in navigator)) { 
+        showBleError('Web Bluetooth not supported. Use Chrome/Edge/Opera on Windows/macOS/Android.'); 
+        return; 
+      }
+      
+      try {
+        if ($('debugMode').checked) {
+          console.log('Requesting BLE device with service:', WHEELCHAIR_SERVICE_UUID);
+        }
+        
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [WHEELCHAIR_SERVICE_UUID] }],
+          optionalServices: [WHEELCHAIR_SERVICE_UUID]
+        });
+        
+        if ($('debugMode').checked) {
+          console.log('BLE device selected:', bleDevice.name);
+        }
+        
+        bleDevice.addEventListener('gattserverdisconnected', handleBLEDisconnect);
+        
+        bleServer = await bleDevice.gatt.connect();
+        
+        if ($('debugMode').checked) {
+          console.log('GATT server connected');
+        }
+        
+        bleService = await bleServer.getPrimaryService(WHEELCHAIR_SERVICE_UUID);
+        
+        if ($('debugMode').checked) {
+          console.log('Wheelchair HID service discovered');
+        }
+        
+        // Discover characteristics
+        try {
+          bleCharacteristics.inputReportControl = await bleService.getCharacteristic(INPUT_REPORT_CONTROL_UUID);
+          await bleCharacteristics.inputReportControl.startNotifications();
+          bleCharacteristics.inputReportControl.addEventListener('characteristicvaluechanged', handleBLEControlNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Control) notifications enabled');
+          }
+        } catch (err) {
+          showBleError('Failed to enable Control notifications (MANDATORY): ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        // Output Report Feedback (recommended)
+        try {
+          bleCharacteristics.outputReportFeedback = await bleService.getCharacteristic(OUTPUT_REPORT_FEEDBACK_UUID);
+          if ($('debugMode').checked) {
+            console.log('Output Report (Feedback) characteristic discovered');
+          }
+        } catch (err) {
+          if ($('debugMode').checked) {
+            console.log('Output Report (Feedback) not available (optional)');
+          }
+        }
+        
+        // Request Feedback (recommended)
+        try {
+          bleCharacteristics.inputReportRequestFeedback = await bleService.getCharacteristic(INPUT_REPORT_REQUEST_FEEDBACK_UUID);
+          await bleCharacteristics.inputReportRequestFeedback.startNotifications();
+          bleCharacteristics.inputReportRequestFeedback.addEventListener('characteristicvaluechanged', handleBLERequestFeedbackNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Request Feedback) notifications enabled');
+          }
+        } catch (err) {
+          if ($('debugMode').checked) {
+            console.log('Input Report (Request Feedback) not available (optional)');
+          }
+        }
+        
+        // Keepalive (mandatory)
+        try {
+          bleCharacteristics.inputReportKeepalive = await bleService.getCharacteristic(INPUT_REPORT_KEEPALIVE_UUID);
+          await bleCharacteristics.inputReportKeepalive.startNotifications();
+          bleCharacteristics.inputReportKeepalive.addEventListener('characteristicvaluechanged', handleBLEKeepaliveNotification);
+          if ($('debugMode').checked) {
+            console.log('Input Report (Keepalive) notifications enabled');
+          }
+        } catch (err) {
+          showBleError('Failed to enable Keepalive notifications (MANDATORY): ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        // Keepalive Response (mandatory)
+        try {
+          bleCharacteristics.outputReportKeepaliveResponse = await bleService.getCharacteristic(OUTPUT_REPORT_KEEPALIVE_RESPONSE_UUID);
+          if ($('debugMode').checked) {
+            console.log('Output Report (Keepalive Response) characteristic discovered');
+          }
+        } catch (err) {
+          showBleError('Failed to discover Keepalive Response characteristic (MANDATORY): ' + err.message);
+          disconnectBLE();
+          return;
+        }
+        
+        var html = '<div class="info-box active"><div class="name">' + (bleDevice.name || 'Unknown Device') + '<span class="source-badge source-ble">BLE</span></div>';
+        html += '<div class="vid">Wheelchair HID Service</div></div>';
+        $('bleInfo').innerHTML = html;
+        $('bleInfo').style.display = 'block';
+        
+        bleConnected = true;
+        bleAutoReconnect = true;  // Enable auto-reconnect for keepalive timeouts
+        activeSource = 'ble';
+        $('bleBtn').textContent = 'Disconnect BLE';
+        $('bleBtn').className = 'btn btn-red';
+        
+        if ($('debugMode').checked) {
+          console.log('BLE connection established successfully');
+        }
+        
+      } catch (err) {
+        showBleError('Connection failed: ' + (err.message || err.name));
+        disconnectBLE();
+      }
+    }
+    
+    function handleBLEDisconnect() {
+      // Ignore if we're already handling the disconnect
+      if (bleDisconnecting || !bleConnected) {
+        return;
+      }
+      
+      if ($('debugMode').checked) {
+        console.log('BLE device disconnected');
+      }
+      
+      // Process Release Report and Disable Drive per spec
+      wdiState.forward = 0;
+      wdiState.turn = 0;
+      wdiState.eStop = false;
+      wdiState.horn = false;
+      seatingState.memory = null;
+      seatingState.tilt = 0;
+      seatingState.recline = 0;
+      seatingState.legrest = 0;
+      seatingState.elevate = 0;
+      seatingState.footplates = 0;
+      seatingState.stand = 0;
+      prevStandard1 = 0;
+      prevVendor1 = 0;
+      wdiState.driveEnabled = false;
+      
+      updateWDIDisplay();
+      updateSeatingDisplay();
+      
+      // Check if we should auto-reconnect
+      var shouldReconnect = bleAutoReconnect;
+      
+      disconnectBLE();
+      
+      if (shouldReconnect) {
+        if ($('debugMode').checked) {
+          console.log('Spontaneous disconnect - will auto-reconnect in 2 seconds...');
+        }
+        $('bleError').textContent = 'Connection lost - reconnecting in 2s...';
+        $('bleError').style.display = 'block';
+        $('bleError').style.background = 'rgba(127, 85, 29, 0.5)';
+        $('bleError').style.borderColor = '#f59e0b';
+        $('bleError').style.color = '#fde68a';
+        
+        setTimeout(function() {
+          reconnectBLE();
+        }, 2000);
+      }
+    }
+    
+    async function disconnectBLE() {
+      // Prevent recursive calls from gattserverdisconnected event
+      if (bleDisconnecting) {
+        return;
+      }
+      
+      bleDisconnecting = true;
+      
+      if (bleCharacteristics.inputReportControl) {
+        try {
+          await bleCharacteristics.inputReportControl.stopNotifications();
+          bleCharacteristics.inputReportControl.removeEventListener('characteristicvaluechanged', handleBLEControlNotification);
+        } catch (e) { }
+      }
+      
+      if (bleCharacteristics.inputReportRequestFeedback) {
+        try {
+          await bleCharacteristics.inputReportRequestFeedback.stopNotifications();
+          bleCharacteristics.inputReportRequestFeedback.removeEventListener('characteristicvaluechanged', handleBLERequestFeedbackNotification);
+        } catch (e) { }
+      }
+      
+      if (bleCharacteristics.inputReportKeepalive) {
+        try {
+          await bleCharacteristics.inputReportKeepalive.stopNotifications();
+          bleCharacteristics.inputReportKeepalive.removeEventListener('characteristicvaluechanged', handleBLEKeepaliveNotification);
+        } catch (e) { }
+      }
+      
+      bleCharacteristics.inputReportControl = null;
+      bleCharacteristics.outputReportFeedback = null;
+      bleCharacteristics.inputReportRequestFeedback = null;
+      bleCharacteristics.inputReportKeepalive = null;
+      bleCharacteristics.outputReportKeepaliveResponse = null;
+      
+      if (bleServer && bleServer.connected) {
+        try {
+          bleServer.disconnect();
+        } catch (e) {
+          if ($('debugMode').checked) {
+            console.log('Error during disconnect:', e);
+          }
+        }
+      }
+      
+      // Always clear server and service references
+      bleServer = null;
+      bleService = null;
+      
+      // Only clear device reference if auto-reconnect is disabled
+      // This preserves the device for reconnection after keepalive timeout
+      if (!bleAutoReconnect && bleDevice) {
+        bleDevice.removeEventListener('gattserverdisconnected', handleBLEDisconnect);
+        bleDevice = null;
+      }
+      bleConnected = false;
+      bleDisconnecting = false;
+      
+      if (!hidConnected) activeSource = null;
+      
+      $('bleBtn').textContent = 'Connect BLE Peripheral';
+      $('bleBtn').className = 'btn btn-cyan';
+      
+      // Only hide info if not auto-reconnecting
+      if (!bleAutoReconnect) {
+        $('bleInfo').style.display = 'none';
+      }
+      
+      if (keepaliveTimerId !== null && !hidConnected) {
+        clearTimeout(keepaliveTimerId);
+        keepaliveTimerId = null;
+      }
+      if (!hidConnected) {
+        missedKeepaliveCount = 0;
+      }
+    }
+    
+    $('bleBtn').onclick = function() { 
+      if (bleConnected) {
+        // User-initiated disconnect - disable auto-reconnect
+        bleAutoReconnect = false;
+        disconnectBLE();
+        if (bleDevice) {
+          bleDevice.removeEventListener('gattserverdisconnected', handleBLEDisconnect);
+          bleDevice = null;
+        }
+        $('bleInfo').style.display = 'none';
+      } else {
+        connectBLE();
+      }
+    };
+
+    // =========================================================================
+    // UI Updates
+    // =========================================================================
+
+    function getWDICommand() {
+      if (!wdiState.driveEnabled) return { cmd: 'DRIVE: DISABLED', cls: 'bg-gray' };
+      if (wdiState.eStop) return { cmd: 'EMERGENCY STOP', cls: 'bg-red' };
+      if (wdiState.mode === 'seating') {
+        if (Math.abs(wdiState.forward) > 0.1) return { cmd: 'SEATING: ' + (wdiState.forward > 0 ? 'UP' : 'DOWN') + ' ' + Math.abs(wdiState.forward * 100).toFixed(0) + '%', cls: 'bg-purple' };
+        return { cmd: 'SEATING: IDLE', cls: 'bg-purple-light' };
+      }
+      var f = wdiState.forward;
+      var t = wdiState.turn;
+      if (Math.abs(f) < 0.1 && Math.abs(t) < 0.1) return { cmd: 'DRIVE: STOPPED', cls: 'bg-gray' };
+      var dir = f > 0.1 ? 'FWD' : (f < -0.1 ? 'REV' : '');
+      if (t < -0.1) dir += (dir ? '+' : '') + 'LEFT';
+      if (t > 0.1) dir += (dir ? '+' : '') + 'RIGHT';
+      return { cmd: 'DRIVE: ' + dir, cls: 'bg-green' };
+    }
+
+    function updateWDIDisplay() {
+      var cmd = getWDICommand();
+      $('commandDisplay').className = 'command-display ' + cmd.cls;
+      $('commandDisplay').querySelector('.cmd').textContent = cmd.cmd;
+
+      var ci = $('controlIndicator');
+      if (wdiState.driveEnabled) {
+        ci.textContent = 'DRIVE: ENABLED';
+        ci.className = 'control-indicator control-active';
+      } else {
+        ci.textContent = 'DRIVE: DISABLED';
+        ci.className = 'control-indicator control-inactive';
+      }
+
+      var knobX = 50 + (wdiState.turn * 45);
+      var knobY = 50 - (wdiState.forward * 45);
+      $('joystickKnob').style.left = knobX + '%';
+      $('joystickKnob').style.top = knobY + '%';
+
+      $('modeValue').textContent = wdiState.mode.toUpperCase();
+      $('speedValue').textContent = wdiState.speed + '/10';
+      $('profileValue').textContent = wdiState.profile;
+
+      var estopItem = $('estopItem');
+      var estopValue = $('estopValue');
+      if (wdiState.eStop) {
+        estopItem.className = 'status-item active';
+        estopValue.textContent = 'ACTIVE';
+        estopValue.style.color = '#fff';
+      } else {
+        estopItem.className = 'status-item';
+        estopValue.textContent = 'Off';
+        estopValue.style.color = '#9ca3af';
+      }
+
+      $('indLeft').className = 'indicator' + (wdiState.leftBlinker ? ' on-orange' : '');
+      $('indRight').className = 'indicator' + (wdiState.rightBlinker ? ' on-orange' : '');
+      $('indLight').className = 'indicator' + (wdiState.headlight ? ' on-yellow' : '');
+      $('indHazard').className = 'indicator' + (wdiState.hazards ? ' on-red' : '');
+      $('indHorn').className = 'indicator' + (wdiState.horn ? ' on-blue' : '');
+      
+      $('luciOverride').textContent = 'LUCI Override: ' + (wdiState.luciOverride ? 'ON' : 'OFF');
+      $('luciOverride').className = 'luci-item' + (wdiState.luciOverride ? ' active' : '');
+      $('luciReact').textContent = 'LUCI React: ' + (wdiState.luciReact ? 'ON' : 'OFF');
+      $('luciReact').className = 'luci-item' + (wdiState.luciReact ? ' active' : '');
+    }
+
+    function updateSeatingDisplay() {
+      $('memoryValue').textContent = seatingState.memory !== null ? seatingState.memory : 'None';
+      $('memoryValue').style.color = seatingState.memory !== null ? '#4ade80' : '#9ca3af';
+
+      var actuators = ['tilt', 'recline', 'legrest', 'elevate', 'footplates', 'stand'];
+      var labels = {
+        tilt: ['◀ Back', '-', 'Fwd ▶'],
+        recline: ['◀ Back', '-', 'Fwd ▶'],
+        legrest: ['▼ Down', '-', '▲ Up'],
+        elevate: ['▼ Down', '-', '▲ Up'],
+        footplates: ['▼ Down', '-', '▲ Up'],
+        stand: ['▼ Down', '-', '▲ Up']
+      };
+
+      for (var i = 0; i < actuators.length; i++) {
+        var act = actuators[i];
+        var val = seatingState[act];
+        var el = $('act' + act.charAt(0).toUpperCase() + act.slice(1));
+        var dirEl = $('act' + act.charAt(0).toUpperCase() + act.slice(1) + 'Dir');
+
+        if (val === 0) {
+          el.style.background = '#374151';
+          dirEl.textContent = labels[act][1];
+          dirEl.style.color = '#6b7280';
+        } else if (val === 1) {
+          el.style.background = '#166534';
+          dirEl.textContent = labels[act][2];
+          dirEl.style.color = '#4ade80';
+        } else {
+          el.style.background = '#7c2d12';
+          dirEl.textContent = labels[act][0];
+          dirEl.style.color = '#fb923c';
+        }
+      }
+    }
+
+    function updateRawDisplay(source, report) {
+      var html = '';
+      
+      html += '<div class="raw-box"><div class="label">Joystick (X, Y)</div>';
+      html += '<div class="axis-row"><span class="name">X:</span><div class="bar"><div class="bar-fill" style="width:' + ((report.x + 127) / 254 * 100) + '%"></div></div><span class="value">' + report.x + ' (' + (report.x > 0 ? 'Right' : report.x < 0 ? 'Left' : 'Center') + ')</span></div>';
+      html += '<div class="axis-row"><span class="name">Y:</span><div class="bar"><div class="bar-fill" style="width:' + ((report.y + 127) / 254 * 100) + '%"></div></div><span class="value">' + report.y + ' (' + (report.y < 0 ? 'Fwd' : report.y > 0 ? 'Rev' : 'Center') + ')</span></div>';
+      html += '</div>';
+      
+      html += '<div class="raw-box"><div class="label">Standard1: 0x' + (report.standard1 >>> 0).toString(16).padStart(8, '0').toUpperCase() + '</div>';
+      html += '<div class="button-grid">';
+      var s1Names = ['Mod', 'Stop', 'DrEn', 'CycPr', 'Haz', 'CycMd', 'Spd-', 'Spd+', 'LBl', 'RBl', 'Menu', 'PrUp', 'DrDis', 'Head', 'Horn', 'PrDn', 'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'MH', 'Rsv', 'Tilt', 'Recl', 'Legs', 'Elev', 'Foot', 'Stnd', 'ST1', 'ST2'];
+      for (var i = 0; i < 32; i++) {
+        var pressed = report.standard1 & (1 << i);
+        html += '<div class="button-item' + (pressed ? ' pressed' : '') + '">' + s1Names[i] + '</div>';
+      }
+      html += '</div></div>';
+      
+      html += '<div class="raw-box"><div class="label">Vendor1: 0x' + (report.vendor1 >>> 0).toString(16).padStart(8, '0').toUpperCase() + '</div>';
+      html += '<div class="button-grid">';
+      var v1Names = ['Mod', 'LuOv', 'LuRe'];
+      for (var i = 0; i < 3; i++) {
+        var pressed = report.vendor1 & (1 << i);
+        html += '<div class="button-item' + (pressed ? ' pressed' : '') + '">' + v1Names[i] + '</div>';
+      }
+      html += '</div></div>';
+      
+      $('rawDataContainer').innerHTML = html;
+    }
+
+    function addEvent(source, axes, btns, data) {
+      var ts = new Date().toLocaleTimeString('en-US', { hour12: false, fractionalSecondDigits: 2 });
+      events.unshift({ id: ++eventId, ts: ts, source: source, axes: axes, btns: btns || [], data: data });
+      if (events.length > 50) events.pop();
+      renderEvents();
+    }
+
+    function renderEvents() {
+      var html = '';
+      for (var i = 0; i < events.length; i++) {
+        var e = events[i];
+        var srcClass = 'src-' + e.source;
+        html += '<div class="event-row"><span class="ts">' + e.ts + '</span>';
+        html += '<span class="src ' + srcClass + '">' + e.source.toUpperCase() + '</span>';
+        if (e.axes) html += '<span class="data">X:' + e.axes[0] + ' Y:' + e.axes[1] + '</span>';
+        if (e.btns && e.btns.length) html += '<span class="btns">[' + e.btns.join(',') + ']</span>';
+        if (e.source === 'feedback' && e.data) html += '<span class="data">FB: P' + e.data.state.profile + ' S' + e.data.state.speed + ' V' + (e.data.state.velocity !== undefined ? e.data.state.velocity.toFixed(1) : '0.0') + 'mph</span>';
+        if (e.source === 'reqfb' && e.data) html += '<span class="data">Req FB #' + e.data.count + ' → sent current settings</span>';
+        if (e.source === 'keepalive' && e.data) {
+          var kaText = 'Keepalive #' + e.data.count;
+          if (e.data.missed) kaText += ' MISSED×' + e.data.missed + ' → ' + e.data.action;
+          html += '<span class="data">' + kaText + '</span>';
+        }
+        html += '</div>';
+      }
+      $('eventLog').innerHTML = html || '<div class="placeholder" style="color:#6b7280;text-align:center;padding:2rem;">No events recorded</div>';
+    }
+
+    // =========================================================================
+    // Init
+    // =========================================================================
+    
+    updateSeatingDisplay();
+    updateWDIDisplay();
+  </script>
+</body>
+</html>
