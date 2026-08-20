@@ -1,8 +1,8 @@
 # Wheelchair HID
 
 ## Version
-- Version 3.1
-- February 28, 2026
+- Version 3.2
+- May 20, 2026
 
 ## Description
 - The Wheelchair HID is intended for bidirectional communication between a Wheelchair host Wheelchair Digital Interface (WDI) implementation and a Bluetooth LE or USB connected App or Device.
@@ -16,11 +16,11 @@
 - A mandatory Keepalive report shall be sent from an App or Device to the Wheelchair host WDI implementation. Apps and Devices must begin sending Keepalive reports after a stable connection is established. The App or Device shall send a Keepalive report every ~233ms. Sending a control report or request feedback report resets the keepalive timer. If a control report or request feedback report has been sent since the last keepalive timer reset, no keepalive report is required until 233ms after the most recent sent report (keepalive, control, or request feedback). Control reports and request feedback reports are not constrained by the 233ms keepalive interval. Control reports may be sent at any rate, subject to release report timing requirements (see Sending Release Reports). Request feedback reports have their own recommended interval (see Request Feedback Timing). This allows the App or Device to avoid transmit congestion by not sending unnecessary keepalive reports when control or request feedback reports are already being sent.
 - The Wheelchair host WDI implementation shall handle the Keepalive reports. 
 - The Wheelchair host WDI implementation shall check that a keepalive report, control report, or request feedback report is received at least every 257ms.
-- The Wheelchair host WDI implementation shall send a Keepalive Response report to the App or Device upon receiving a Keepalive report. The Keepalive Response report contains a cryptographically unique host UUID (16 bytes). The App or Device shall use the Keepalive Response report to identify the Wheelchair host WDI implementation.
+- The Wheelchair host WDI implementation shall send a Keepalive Response report to the App or Device upon receiving a Keepalive report. The Keepalive Response report contains a cryptographically unique host UUID (16 bytes). The first two bytes of the host UUID encode a 16-bit manufacturer ID identifying the wheelchair manufacturer (see Appendix F). The App or Device shall use the Keepalive Response report to identify the Wheelchair host WDI implementation, and may extract the manufacturer ID from the host UUID to identify the manufacturer.
 - For Bluetooth LE connections, in the case of the first time an app or device is connected to a Wheelchair host WDI implementation, after receiving the first Keepalive Response report the app or device shall save the host ID for subsequent connection checks.
 - For subsequent Bluetooth LE connections, after receiving the first Keepalive Response report the app or device shall compare the received host ID against the saved host ID. If the host IDs match proceed as normal. If the host IDs do not match then the app or device shall stop sending all reports (keepalive, control, and request feedback) in order to trigger a Wheelchair host WDI implementation disconnect. After this particular disconnect the app or device shall delay advertising for 15 seconds.
 - The app or device shall provide a mechanism to clear a saved host ID.
-- The app or device should provide a way for a user to see some form of the host ID.
+- The app or device should provide a way for a user to see the host ID. The full 16-byte host UUID shall be displayed (e.g., in standard string form); displaying only a partial form (such as a truncated UUID, hash, or the manufacturer name alone) is not sufficient.
 - For Bluetooth LE connections, the Wheelchair host WDI implementation shall disconnect the Bluetooth LE connection if three consecutive report timeouts occur (no keepalive, control, or request feedback report received within three consecutive 257ms windows). The Wheelchair host WDI implementation shall treat this as a Release Report and Disable Drive.
 - For USB connections, if three consecutive report timeouts occur (no keepalive, control, or request feedback report received within three consecutive 257ms windows), the Wheelchair host WDI implementation shall treat this as a Release Report and Disable Drive.
 
@@ -131,6 +131,11 @@
 | 30 | Reserved for future use |
 | 31 | Reserved for future use |
 
+
+### WDI Vendor Specific Bit Interpretation
+The `WDI Vendor Specific1` and `WDI Vendor Specific2` fields form a per-manufacturer namespace. Bit 0 is the Modifier bit; the Modifier convention itself ("modifier active") is shared at the spec level, but each manufacturer may pair the Modifier with its own bit assignments to define alternate functions, following the `0+X` notation used in Standard1. Each manufacturer defines bits 1–31 of these fields, and any Modifier-paired interpretations of them, independently — the same bit number, and the same Modifier-paired combination, may carry entirely different meanings for different manufacturers. This specification lists bits 1–31 as "Reserved for future use" because the main spec is manufacturer-agnostic; the actual definitions live in each manufacturer's own vendor document.
+
+The 16-bit manufacturer ID at bytes 0–1 of the Host UUID in the Keepalive Response report (see Appendix F: Manufacturer IDs) identifies which manufacturer's vendor document applies for a given host. Vendor documents are maintained separately (see [Vendors](vendors/vendors.md)). An App or Device shall extract the manufacturer ID and apply that manufacturer's vendor document when interpreting (or generating) `WDI Vendor Specific1` and `WDI Vendor Specific2` for that host.
 
 ### WDI Vendor Specific1 Bits
 
@@ -247,19 +252,33 @@
 - The Wheelchair Keepalive Response HID report is sent from the Wheelchair host WDI implementation to the App or Device in response to receiving a Keepalive report.
 - Sending this report is mandatory upon receiving a Keepalive report.
 - The report contains a cryptographically unique host UUID that identifies the Wheelchair host.
+- The first two bytes of the host UUID encode a 16-bit manufacturer ID that identifies the wheelchair manufacturer (see Appendix F).
 - The App or Device shall use the Keepalive Response report to identify the Wheelchair host WDI implementation.
+- The App or Device may extract the manufacturer ID from the first two bytes of the host UUID to identify the wheelchair manufacturer.
 
 ### Wheelchair Keepalive Response HID Descriptor
-- Host UUID UInt8[16]  (128-bit UUID, 16 bytes)
+- Host UUID UInt8[16]  (128-bit UUID, 16 bytes, transmitted in big-endian / network byte order)
 
 ### Wheelchair Keepalive Response HID Report
 - Host UUID = 16-byte cryptographically unique identifier
+  - Bytes 0–1: 16-bit manufacturer ID, big-endian (see Appendix F)
+  - Bytes 2–15: cryptographically random, with RFC 4122 version 4 and variant markers preserved (see Host UUID Requirements)
 
 ### Host UUID Requirements
-- The Host UUID shall be a valid UUID as defined by RFC 4122.
+- The Host UUID shall be a valid RFC 4122 version 4 (random) UUID.
 - The Host UUID shall be cryptographically unique to the Wheelchair host WDI implementation.
 - The Host UUID shall remain constant for the lifetime of the Wheelchair host WDI implementation.
-- The Host UUID may be generated using UUID version 4 (random) or another suitable method that ensures uniqueness.
+- The 16 bytes shall be transmitted in big-endian / network byte order. Byte 0 of the report corresponds to the leftmost hex pair of the UUID in standard string form (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`).
+- Bytes 0–1 shall contain the 16-bit manufacturer ID in big-endian order (see Appendix F for assigned values).
+- Bytes 2–15 shall be generated to ensure cryptographic uniqueness across hosts from the same manufacturer.
+- The high nibble of byte 6 shall be `0x4` (UUID version 4 marker).
+- The top two bits of byte 8 shall be `0b10` (RFC 4122 variant marker).
+- A manufacturer that has not been assigned an ID shall use `0x0000` (unknown / unassigned, see Appendix F).
+
+### Manufacturer ID Extraction
+- Apps and Devices may parse bytes 0–1 of the host UUID as a big-endian 16-bit unsigned integer to obtain the manufacturer ID.
+- Apps and Devices may use the manufacturer ID to display the manufacturer name, filter or categorize known hosts, or apply manufacturer-specific behavior.
+- The full 16-byte host UUID, not the manufacturer ID alone, shall continue to be used for host identity (save / compare / display) per the Keepalive section.
 
 ---
 
@@ -340,6 +359,12 @@ Note: Fraction values 10–15 (0xA–0xF) are reserved.
 | 30 | Reserved for future use |
 | 31 | Reserved for future use |
 
+
+### WDI Vendor Specific Bit Interpretation
+
+The `WDI Vendor Specific1` and `WDI Vendor Specific2` fields of the Feedback report form a per-manufacturer namespace. All 32 bits of each field are fully available to every manufacturer independently — the same bit number may carry entirely different meanings for different manufacturers. This specification lists all bits as "Reserved for future use" because the main spec is manufacturer-agnostic; the actual definitions live in each manufacturer's own vendor document.
+
+The 16-bit manufacturer ID at bytes 0–1 of the Host UUID in the Keepalive Response report (see Appendix F: Manufacturer IDs) identifies which manufacturer's vendor document applies for a given host. Vendor documents are maintained separately (see [Vendors](vendors/vendors.md)). An App or Device shall extract the manufacturer ID and apply that manufacturer's vendor document when interpreting `WDI Vendor Specific1` and `WDI Vendor Specific2` from that host's Feedback reports.
 
 ### WDI Vendor Specific1 Bits
 
@@ -651,7 +676,7 @@ Per the main specification (Section: Keepalive), keepalive is mandatory:
 |-------------|-------|-------------|
 | Monitor Keepalive After First Received | **MANDATORY** | Begin keepalive monitoring only after receiving the first Keepalive report (Report ID 4) on the Keepalive characteristic. |
 | Check Interval | **MANDATORY** | Check that a keepalive, control, or request feedback report is received at least every 257ms after monitoring begins. |
-| Send Keepalive Response | **MANDATORY** | Upon receiving a Keepalive report, immediately send a Keepalive Response report (Report ID 5) containing the host UUID (16 bytes) on the Keepalive Response characteristic. |
+| Send Keepalive Response | **MANDATORY** | Upon receiving a Keepalive report, immediately send a Keepalive Response report (Report ID 5) containing the host UUID (16 bytes, with the 16-bit manufacturer ID in bytes 0–1 — see Appendix F) on the Keepalive Response characteristic. |
 | Disconnect on Missed Reports | **MANDATORY** | Disconnect the BLE connection if 3 consecutive report timeouts occur (no keepalive, control, or request feedback report received within three consecutive 257ms windows). |
 | Grace Period Before First Keepalive | **MANDATORY** | Do not enforce keepalive timeout until the first Keepalive report is received. This allows time for connection setup. |
 
@@ -684,6 +709,14 @@ Per the main specification (Section: Disconnects):
 | Report timeout (3 consecutive misses) | Disconnect BLE, process Release Report, process Drive Disable, resume scanning |
 
 ### D.9 UUID Byte Order
+
+This section addresses two distinct UUID byte-order conventions in the spec. They apply to different layers and should not be conflated.
+
+**1. BLE service and characteristic UUIDs (framing layer):** little-endian on the wire.
+
+**2. Application-payload UUIDs (e.g., the Host UUID in the Keepalive Response report):** canonical RFC 4122 byte order (big-endian / network order). Byte 0 of the payload corresponds to the leftmost hex pair of the UUID string form, matching the in-memory representation expected by standard UUID libraries (`CBUUID`, `java.util.UUID`, `uuid.UUID(bytes=...)`, `System.Guid`, etc.). See the Wheelchair Keepalive Response HID section for the Host UUID definition, including the 16-bit manufacturer ID at bytes 0–1 (see Appendix F).
+
+The remainder of this section describes convention (1) — BLE framing UUIDs.
 
 BLE UUIDs are transmitted and stored in little-endian byte order. The Wheelchair HID Service UUID in various formats:
 
@@ -725,7 +758,7 @@ A compliant Wheelchair HID BLE Central implementation MUST:
 12. Resume scanning after disconnect or discovery failure
 13. Discover and enable notifications on the Keepalive characteristic
 14. Discover the Keepalive Response characteristic
-15. Send a Keepalive Response report (16-byte host UUID) upon receiving each Keepalive report
+15. Send a Keepalive Response report (16-byte host UUID, with the 16-bit manufacturer ID in bytes 0–1 per Appendix F) upon receiving each Keepalive report
 16. Reset the keepalive timeout timer upon receiving a control report or request feedback report, in addition to keepalive reports
 
 A compliant implementation SHOULD:
@@ -861,7 +894,7 @@ The Keepalive Response Output Report characteristic MUST meet these requirements
 |-------------|-------|-------------|
 | Use Notifications | **MANDATORY** | Send Control reports as notifications on the Input Report characteristic. |
 | Report Format | **MANDATORY** | Send exactly 18 bytes: 2 bytes (x, y) + 16 bytes (4 × uint32 bitfields). |
-| Byte Order | **MANDATORY** | Use little-endian byte order for all multi-byte fields. |
+| Byte Order | **MANDATORY** | Use little-endian byte order for all packed multi-byte numeric fields in HID reports (e.g., the four `UInt32` bitfields in the Control report and the three `UInt32` bitfields in the Feedback report). This rule does not apply to opaque byte arrays such as the Host UUID in the Keepalive Response report, which has its own canonical byte order (see the Wheelchair Keepalive Response HID section and Appendix D.9). |
 | Wait for CCCD Enable | **MANDATORY** | Do not send notifications until the Central has written `0x0001` to the CCCD. |
 
 #### E.3.2 Sending Request Feedback Reports
@@ -909,7 +942,9 @@ The Keepalive Response Output Report characteristic is mandatory:
 | Save Host ID (First Connection) | **MANDATORY** | On first-time connection to a Wheelchair host WDI implementation, after receiving the first Keepalive Response report, save the host ID for subsequent connection checks. |
 | Verify Host ID (Subsequent Connections) | **MANDATORY** | On subsequent connections, after receiving the first Keepalive Response report, compare the received host ID against the saved host ID. If the host IDs match, proceed as normal. If they do not match, stop sending all reports (keepalive, control, and request feedback) to trigger a Wheelchair host WDI implementation disconnect. After this particular disconnect delay advertising for 15 seconds. |
 | Clear Host ID Mechanism | **MANDATORY** | Provide a mechanism to clear a saved host ID. |
-| Display Host ID | **RECOMMENDED** | Provide a way for a user to see some form of the host ID. |
+| Display Host ID | **RECOMMENDED** | Provide a way for a user to see the host ID. The full 16-byte host UUID shall be displayed (e.g., in standard string form); displaying only a partial form (such as a truncated UUID, hash, or the manufacturer name alone) is not sufficient. |
+| Manufacturer ID Extraction | OPTIONAL | The Peripheral may parse bytes 0–1 of the host UUID as a big-endian 16-bit unsigned integer to obtain the manufacturer ID (see Appendix F). |
+| Display Manufacturer | **RECOMMENDED** | If a manufacturer ID is recognized, the Peripheral may display the manufacturer name in addition to the host ID. The manufacturer name shall not be used as a substitute for displaying the host ID. Treat `0x0000` and unrecognized IDs as "unknown manufacturer" rather than as an error. |
 
 ### E.4 Keepalive Transmission
 
@@ -1037,12 +1072,72 @@ A compliant implementation SHOULD:
 
 21. Implement Output Report characteristic to receive feedback
 22. Implement Request Feedback Input Report characteristic to request feedback from the Central
-23. Provide a way for a user to see some form of the host ID
+23. Provide a way for a user to see the host ID; the full 16-byte host UUID shall be displayed (the manufacturer name alone is not sufficient)
 24. If feedback reports have been received and stop arriving, treat previously received feedback data as stale
+25. If a recognized manufacturer ID is present in bytes 0–1 of the host UUID, display the manufacturer name in addition to the host ID (the manufacturer name shall not be used in place of the host ID) (see Appendix F)
+
+---
+
+## Appendix F: Manufacturer IDs
+
+### Description
+
+The first two bytes of the host UUID (bytes 0–1 of the Keepalive Response report payload) encode a 16-bit manufacturer ID in big-endian order. This identifies the wheelchair manufacturer that produced the Wheelchair host WDI implementation. Apps and Devices may extract this value to display the manufacturer name, filter known hosts, or apply manufacturer-specific behavior.
+
+The remaining 14 bytes of the host UUID provide cryptographic uniqueness across hosts from the same manufacturer, while preserving the RFC 4122 version 4 and variant markers (see Host UUID Requirements in the Wheelchair Keepalive Response HID section).
+
+### Format
+
+| Field | Size | Position | Encoding |
+|-------|------|----------|----------|
+| Manufacturer ID | 2 bytes (16 bits) | Bytes 0–1 of host UUID | Big-endian unsigned integer |
+
+In standard UUID string form (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`), the manufacturer ID appears as the first four hex digits. For example, a host UUID of `1234ABCD-EF01-4567-89AB-CDEF01234567` encodes manufacturer ID `0x1234`.
+
+### Reserved Values
+
+| ID / Range | Purpose |
+|------------|---------|
+| `0x0000` | Unknown / unassigned manufacturer |
+| `0x0001` – `0x000A` | Reserved for testers and development use |
+| `0x10A5` | Reserved (matches the first two bytes of the Wheelchair HID Service UUID base `10A50001-C4EA-4B47-AE30-A7D9577FC3F9`; reserved to avoid visual confusion between host UUIDs and service UUIDs) |
+
+Manufacturers shall not be assigned any reserved value.
+
+### Assigned Manufacturer IDs
+
+| ID | Manufacturer |
+|----|--------------|
+| `0x000B` | LUCI Mobility, Inc. |
+| `0x000C` | LifeDrive Mobility, LLC |
+
+### Registry
+
+This appendix maintains the authoritative registry of Wheelchair HID manufacturer IDs. The registry is intentionally separate from existing 16-bit registries (such as Bluetooth SIG Company Identifiers and USB-IF Vendor IDs) because Wheelchair HID hosts may support Bluetooth LE, USB, or both, and a transport-specific registry would not cover all implementations.
+
+Requests for assignment of a manufacturer ID may be submitted to the maintainers of this specification. At most one manufacturer ID shall be assigned per manufacturer. Assigned IDs shall be stable for the lifetime of the manufacturer.
+
+### App and Device Behavior
+
+| Requirement | Level | Description |
+|-------------|-------|-------------|
+| Parse Manufacturer ID | OPTIONAL | Apps and Devices may parse bytes 0–1 of the host UUID as a big-endian 16-bit unsigned integer to obtain the manufacturer ID. |
+| Display Manufacturer | **RECOMMENDED** | When a recognized manufacturer ID is present, Apps and Devices should display the manufacturer name in addition to the host ID. The manufacturer name shall not be used as a substitute for displaying the host ID. |
+| Handle Unknown IDs | **MANDATORY** | Apps and Devices shall treat `0x0000` and any unrecognized manufacturer ID as "unknown manufacturer" rather than as an error. The registry may grow over time, so unrecognized IDs are expected. |
+| Do Not Use For Identity | **MANDATORY** | Apps and Devices shall continue to use the full 16-byte host UUID, not the manufacturer ID alone, for host identity (save / compare per the Keepalive section). |
+
+### Wheelchair Host WDI Implementation Behavior
+
+| Requirement | Level | Description |
+|-------------|-------|-------------|
+| Use Assigned ID | **MANDATORY** | A Wheelchair host WDI implementation from a manufacturer that has been assigned a manufacturer ID shall use that ID in bytes 0–1 of its host UUID. |
+| Use 0x0000 If Unassigned | **MANDATORY** | A Wheelchair host WDI implementation from a manufacturer that has not been assigned a manufacturer ID shall use `0x0000` in bytes 0–1 of its host UUID. |
+| Stable ID | **MANDATORY** | The manufacturer ID shall remain constant for the lifetime of the Wheelchair host WDI implementation (consistent with the Host UUID being constant for the lifetime of the implementation). |
 
 ---
 
 ## Version History
+- 3.2 The first two bytes of the host UUID in the Keepalive Response report now encode a 16-bit manufacturer ID (big-endian). The remaining 14 bytes continue to provide cryptographic uniqueness. Clarified that the host UUID is transmitted in big-endian / network byte order. The Host UUID remains a valid RFC 4122 version 4 UUID. Apps and Devices may extract the manufacturer ID to identify the wheelchair manufacturer. Added Appendix F: Manufacturer IDs, with reserved values (`0x0000` unknown, `0x0001`–`0x000A` testers, `0x10A5` reserved due to conflict with the service UUID base), an assignment registry, and initial assignments (`0x000B` LUCI Mobility, Inc.; `0x000C` LifeDrive Mobility, LLC). Clarified throughout that the manufacturer name shall not be used as a substitute for displaying the host ID — Apps and Devices should display the full 16-byte host UUID, and may display the manufacturer name in addition. Updated Keepalive section, Wheelchair Keepalive Response HID section, and Appendices D and E. Scoped the "little-endian for multi-byte fields" rule in E.3.1 to packed numeric fields, and revised Appendix D.9 to distinguish BLE framing UUIDs (little-endian) from application-payload UUIDs (big-endian / canonical RFC 4122). Extracted LUCI vendor-specific bit assignments (Control `WDI Vendor Specific1` bits 1–2 and Feedback `WDI Vendor Specific1` bits 0–3) into a separate vendor document (`luci.md`); the corresponding bit positions in the main spec are now Reserved for future use. Added a `### WDI Vendor Specific Bit Interpretation` subsection to both the Wheelchair Control HID and Wheelchair Feedback HID sections, clarifying that Vendor Specific bits form a per-manufacturer namespace — every manufacturer has full independent access, including pairing the Modifier bit (in Control) with their own bit assignments per the `0+X` convention used in Standard1, with the manufacturer defining what those pairings mean — and that the 16-bit manufacturer ID in the Host UUID identifies which manufacturer's vendor document applies.
 - 3.1 Revised recommended Request Feedback Report interval to greater than 0.750 seconds.
 - 3.0 Control reports and request feedback reports now reset the host's 257ms keepalive timeout timer, in addition to keepalive reports. On the app/device side, sending a control report or request feedback report resets the 233ms keepalive transmission timer, reducing unnecessary keepalive transmissions during active control. Changed disconnect threshold from 2 consecutive missed keepalives to 3 consecutive report timeouts. On host ID mismatch, the app or device shall now stop sending all reports (keepalive, control, and request feedback), not just keepalive reports. Added recommendation that apps and devices should treat feedback data as stale if feedback reports stop arriving. Updated Keepalive section, Wheelchair Feedback HID section, and Appendices D and E.
 - 2.9 Added Profile Up (bit 11) and Profile Down (bit 15) to Control report Standard1.
