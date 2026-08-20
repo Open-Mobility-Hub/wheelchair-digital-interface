@@ -17,7 +17,7 @@ limitations under the License. -->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WDI Wheelchair HID 3.0 Tester (USB + BLE)</title>
+  <title>WDI Wheelchair HID 3.2 Tester (USB + BLE)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: #111827; color: #fff; min-height: 100vh; padding: 1rem; }
@@ -125,7 +125,7 @@ limitations under the License. -->
 <body>
   <div class="container">
     <header>
-      <h1>WDI Wheelchair HID Tester<span class="version-badge">HID 3.0</span><span class="version-badge" style="background:#0891b2">USB + BLE</span></h1>
+      <h1>WDI Wheelchair HID Tester<span class="version-badge">HID 3.2</span><span class="version-badge" style="background:#0891b2">USB + BLE</span></h1>
       <p>Wheelchair Digital Interface - USB HID & Bluetooth LE Central Testing Tool</p>
     </header>
 
@@ -160,7 +160,7 @@ limitations under the License. -->
 
         <div class="section-label">Keepalive (0x04) Received / Response (0x05)</div>
         <div id="keepaliveStatus" style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">No keepalive received</div>
-        <div id="hostUuidDisplay" style="font-size:0.65rem;color:#6b7280;margin-top:0.25rem;font-family:monospace;word-break:break-all;">Host UUID: 7a e3 4b 91 c2 0f 48 d6 a1 5e 3d 82 f7 60 19 b4</div>
+        <div id="hostUuidDisplay" style="font-size:0.65rem;color:#6b7280;margin-top:0.25rem;font-family:monospace;word-break:break-all;">Host UUID: (loading)</div>
 
         <div class="divider"></div>
         <label style="font-size:0.75rem;color:#9ca3af;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
@@ -234,7 +234,7 @@ limitations under the License. -->
 
     <div class="panel" style="margin-top:1rem">
       <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Wheelchair HID 3.0 Mapping Reference</span>
+        <span>Wheelchair HID 3.2 Mapping Reference</span>
         <div>
           <button class="tab-btn active" id="tabControl">Control (0x01)</button>
           <button class="tab-btn" id="tabFeedback">Feedback (0x02)</button>
@@ -310,9 +310,10 @@ limitations under the License. -->
       <div id="mappingKeepaliveResp" style="display:none;">
         <p style="font-size:0.75rem;color:#9ca3af;margin-bottom:0.75rem;">Keepalive Response Report (16 bytes): Host UUID sent from Central to App/Device.</p>
         <div class="mapping-grid">
-          <div class="mapping-item"><span class="label">Bytes 0-15:</span> Host UUID (128-bit, RFC 4122)</div>
+          <div class="mapping-item"><span class="label">Bytes 0-1:</span> Manufacturer ID (UInt16 BE, Appendix F)</div>
+          <div class="mapping-item"><span class="label">Bytes 2-15:</span> Random tail (RFC 4122 v4 markers preserved)</div>
         </div>
-        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;">Sent from Central (host) to the App/Device upon receiving each Keepalive report. Contains a cryptographically unique 16-byte host UUID that identifies the Wheelchair host WDI implementation. The App/Device uses this to verify it is connected to the expected host.</p>
+        <p style="font-size:0.7rem;color:#6b7280;margin-top:0.75rem;">Sent from Central (host) to the App/Device upon receiving each Keepalive report. The host UUID is a cryptographically unique 16-byte identifier (RFC 4122 v4). Bytes 0–1 encode the 16-bit manufacturer ID big-endian per spec 3.2 Appendix F; the remaining 14 bytes provide per-host uniqueness. The App/Device uses this to verify it is connected to the expected host.</p>
       </div>
     </div>
 
@@ -326,7 +327,7 @@ limitations under the License. -->
 
   <script>
     // =========================================================================
-    // Wheelchair HID 3.0 Constants
+    // Wheelchair HID 3.2 Constants
     // =========================================================================
     
     // BLE UUIDs (from spec Appendix B)
@@ -453,9 +454,13 @@ limitations under the License. -->
     var keepaliveTimerId = null;
     var missedKeepaliveCount = 0;
     
-    // Host UUID (16 bytes) - fixed for the lifetime of this host instance
+    // Host UUID (16 bytes) - fixed for the lifetime of this host instance.
+    // Bytes 0-1: 16-bit manufacturer ID big-endian per spec 3.2 Appendix F.
+    //   0x0001 is in the reserved tester / development range (0x0001-0x000A).
+    // Bytes 2-15: cryptographically random tail with RFC 4122 v4 markers
+    //   preserved (byte 6 high nibble = 0x4; byte 8 top two bits = 0b10).
     var hostUUID = new Uint8Array([
-      0x7A, 0xE3, 0x4B, 0x91, 0xC2, 0x0F, 0x48, 0xD6,
+      0x00, 0x01, 0x4B, 0x91, 0xC2, 0x0F, 0x48, 0xD6,
       0xA1, 0x5E, 0x3D, 0x82, 0xF7, 0x60, 0x19, 0xB4
     ]);
     
@@ -1722,9 +1727,13 @@ limitations under the License. -->
     // =========================================================================
     // Init
     // =========================================================================
-    
+
     updateSeatingDisplay();
     updateWDIDisplay();
+    // Render the actual host UUID (bytes 0-1 = manufacturer ID, bytes 2-15
+    // = random tail) so the display can't drift from what's transmitted.
+    $('hostUuidDisplay').textContent = 'Host UUID: ' +
+      Array.from(hostUUID).map(function(b) { return b.toString(16).padStart(2, '0'); }).join(' ');
   </script>
 </body>
 </html>
